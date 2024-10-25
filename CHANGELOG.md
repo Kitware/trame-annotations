@@ -2,6 +2,13 @@
 
 
 
+## v0.0.2 (2024-10-25)
+
+### Fix
+
+* fix(publish): update ci to publish ([`5e9a39d`](https://github.com/Kitware/trame-annotations/commit/5e9a39d6cdffbab39ab173be2b7ab94b7db51657))
+
+
 ## v0.0.1 (2024-10-25)
 
 ### Chore
