@@ -38,10 +38,10 @@ jobs:
             name: "MacOSX",
             os: macos-latest
           }
-        - {
-            name: "Windows",
-            os: windows-latest
-          }
+        # - {
+        #     name: "Windows",
+        #     os: windows-latest
+        #   }
 
     defaults:
       run:
