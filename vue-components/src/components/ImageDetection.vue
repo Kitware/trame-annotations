@@ -19,7 +19,7 @@ const TOOLTIP_PADDING = 12 // fudge to keep tooltip from clipping/overflowing. I
 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined
 
-function doRectanglesOverlap(recA: Rectangle<any>, recB: Rectangle<any>): Boolean {
+function doRectanglesOverlap(recA: Rectangle<any>, recB: Rectangle<any>): boolean {
   const noHOverlap = recB.x >= recA.x + recA.width || recA.x >= recB.x + recB.width
 
   if (noHOverlap) {
@@ -141,12 +141,12 @@ function mouseLeave() {
 }
 
 function displayToPixel(x: number, y: number, canvas: HTMLCanvasElement): [number, number] {
-  const canvasBounds = canvas.getBoundingClientRect()
+  const canvasBounds = canvas.getBoundingClientRect();
 
-  const pixelX = (canvas.width * (x - canvasBounds.left)) / canvasBounds.width
-  const pixelY = (canvas.height * (y - canvasBounds.top)) / canvasBounds.height
+  const pixelX = (canvas.width * (x - canvasBounds.left)) / canvasBounds.width;
+  const pixelY = (canvas.height * (y - canvasBounds.top)) / canvasBounds.height;
 
-  return [pixelX, pixelY]
+  return [pixelX, pixelY];
 }
 
 const mounted = ref(false)
@@ -244,20 +244,23 @@ const src = computed(() => unref(props.src))
 <template>
   <div style="position: relative">
     <img
-      :src="src"
       ref="img"
-      @load="onImageLoad"
+      :src="src"
       :style="{ outlineWidth: borderSize + 'px' }"
       style="width: 100%; outline-style: dotted; outline-color: red"
+      @load="onImageLoad"
+    >
+    <canvas 
+      ref="visibleCanvas" 
+      style="width: 100%; position: absolute; left: 0; top: 0" 
     />
-    <canvas ref="visibleCanvas" style="width: 100%; position: absolute; left: 0; top: 0"></canvas>
     <canvas
       ref="pickingCanvas"
       style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
       @mouseenter="mouseEnter"
       @mousemove="mouseMove"
       @mouseleave="mouseLeave"
-    ></canvas>
+    />
     <ul
       ref="labelContainer"
       style="
@@ -273,6 +276,6 @@ const src = computed(() => unref(props.src))
         background-color: #efefef;
         list-style-type: none;
       "
-    ></ul>
+    />
   </div>
 </template>
