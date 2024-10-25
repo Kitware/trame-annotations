@@ -104,6 +104,7 @@ jobs:
             python -m pip install --upgrade pip setuptools wheel build python-semantic-release
 
       - name: Python Semantic Release
+        id: release
         uses: relekang/python-semantic-release@v9.4.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
