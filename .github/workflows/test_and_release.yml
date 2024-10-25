@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -99,15 +99,24 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build Vue Components
+      - name: Install dependencies
         run: |
-          cd vue-components
-          npm i
-          npm run build
+            python -m pip install --upgrade pip setuptools wheel build python-semantic-release
 
       - name: Python Semantic Release
-        uses: relekang/python-semantic-release@v7.34.6
+        uses: relekang/python-semantic-release@v9.4.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          repository_username: __token__
-          repository_password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: steps.release.outputs.released == 'true'
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Publish package distributions to GitHub Releases
+        uses: python-semantic-release/upload-to-gh-release@main
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
