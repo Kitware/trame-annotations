@@ -1,4 +1,4 @@
-from trame_annotations.widgets.annotations import *
+from trame_annotations.widgets.annotations import *  # noqa F403 F401
 
 
 def initialize(server):

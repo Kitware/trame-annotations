@@ -19,7 +19,7 @@ export default {
         },
       },
     },
-    outDir: "../trame_annotations/module/serve",
+    outDir: "../src/trame_annotations/module/serve",
     assetsDir: ".",
   },
   plugins: [vue()],
