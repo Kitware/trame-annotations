@@ -1,0 +1,55 @@
+{
+  "name": "vue-trame_annotations",
+  "private": true,
+  "version": "0.0.0",
+  "main": "./dist/trame_annotations.umd.js",
+  "unpkg": "./dist/trame_annotations.umd.js",
+  "module": "./dist/trame_annotations.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/trame_annotations.mjs",
+      "require": "./dist/trame_annotations.umd.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --emptyOutDir",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore --ignore-pattern public",
+    "semantic-release": "semantic-release"
+  },
+  "dependencies": {
+    "@timohausmann/quadtree-ts": "^2.2.2"
+  },
+  "peerDependencies": {
+    "vue": "^2.7.0 || >=3.0.0"
+  },
+  "devDependencies": {
+    "@colormap/core": "0.2.0",
+    "@colormap/presets": "0.2.0",
+    "@rushstack/eslint-patch": "^1.3.2",
+    "@timohausmann/quadtree-ts": "^2.0.0-beta.1",
+    "@tsconfig/node18": "^18.2.0",
+    "@types/node": "^18.17.0",
+    "@vitejs/plugin-vue": "^4.2.3",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^11.0.3",
+    "@vue/tsconfig": "^0.4.0",
+    "eslint": "^8.45.0",
+    "eslint-plugin-vue": "^9.15.1",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.0.0",
+    "pretty-quick": "^4.0.0",
+    "scatter-gl": "^0.0.13",
+    "semantic-release": "^24.0.0",
+    "typescript": "~5.1.6",
+    "vite": "^4.5.5",
+    "vue": "^3.0.0",
+    "vue-tsc": "^1.8.6"
+  },
+  "files": [
+    "dist/*",
+    "src/*",
+    "*.json",
+    "*.js"
+  ]
+}
