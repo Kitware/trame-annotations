@@ -11,6 +11,7 @@ export default {
       formats: ["umd"],
       fileName: "trame_annotations",
     },
+    sourcemap: true,
     rollupOptions: {
       external: ["vue"],
       output: {

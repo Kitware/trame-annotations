@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build --emptyOutDir --watch ",
     "build": "vite build --emptyOutDir",
     "lint": "eslint && prettier --check .",
     "format": "prettier --write .",
