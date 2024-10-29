@@ -22,6 +22,7 @@ class ImageDetection(HtmlElement):
             **kwargs,
         )
         self._attr_names += [
+            "src",
             "identifier",
             "annotations",
             "categories",

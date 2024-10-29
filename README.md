@@ -22,4 +22,5 @@ pip install -e '.[dev]'
 pip install pre-commit
 pre-commit install
 pytest .
+python examples/image_detection.py
 ```
