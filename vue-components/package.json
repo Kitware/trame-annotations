@@ -16,7 +16,7 @@
     "dev": "vite",
     "build": "vite build --emptyOutDir",
     "lint": "eslint && prettier --check .",
-    "format": "prettier --write src/**/*.{js,vue,ts}",
+    "format": "prettier --write .",
     "semantic-release": "semantic-release"
   },
   "dependencies": {
