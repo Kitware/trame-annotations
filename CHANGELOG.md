@@ -2,6 +2,39 @@
 
 
 
+## v0.1.0 (2024-10-31)
+
+### Chore
+
+* chore(vue-components): dev build watch and sourcemaps ([`927456d`](https://github.com/Kitware/trame-annotations/commit/927456d8428da918692411bca4476485219b1cbb))
+
+* chore(ci): setup node for pre-commit checks ([`39f382c`](https://github.com/Kitware/trame-annotations/commit/39f382c29c3c4428f9b71351c7608f249b9f6521))
+
+* chore(pre-commit): add &#34;npm run lint&#34; check ([`d22e1b4`](https://github.com/Kitware/trame-annotations/commit/d22e1b487f302a70b19256104cc7f095e8a49444))
+
+### Documentation
+
+* docs(examples): add ImageDetection widget example ([`d06938f`](https://github.com/Kitware/trame-annotations/commit/d06938f1387bca22640441da7711a5cdd5b768e1))
+
+### Feature
+
+* feat(ImageDetection): outline for annotation instead of filled rectangle ([`4d0ea1e`](https://github.com/Kitware/trame-annotations/commit/4d0ea1e9b181c9e62c9ccaaa7dd8455d5cfa7b3b))
+
+### Style
+
+* style(vue-components): style with default prettier ([`937f318`](https://github.com/Kitware/trame-annotations/commit/937f31897402d57592d1abe08f7c0816c2f9fa8c))
+
+### Unknown
+
+* Merge pull request #2 from Kitware/outline
+
+feat(ImageDetection): outline for annotation instead of filled rectangle ([`e934f78`](https://github.com/Kitware/trame-annotations/commit/e934f78851a92f8381365c1c16bb59348ce01483))
+
+* Merge pull request #1 from Kitware/example
+
+docs(examples): add ImageDetection widget example ([`ab53c71`](https://github.com/Kitware/trame-annotations/commit/ab53c71ae22f84351b0090164dccbc55f2aba0b4))
+
+
 ## v0.0.2 (2024-10-25)
 
 ### Fix
