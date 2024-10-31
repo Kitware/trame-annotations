@@ -24,3 +24,10 @@ pre-commit install
 pytest .
 python examples/image_detection.py
 ```
+
+### To continually rebuild JS bundle
+
+```bash
+cd vue-components
+npm run dev
+```
