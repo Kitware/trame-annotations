@@ -5,6 +5,9 @@ import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
 
 import type { Annotation, Category, Vector3 } from "../types/index.ts";
 
+const LINE_OPACITY = 0.9;
+const LINE_WIDTH = 2; // in pixels
+
 const CATEGORY_COLORS: Vector3<number>[] = [
   [255, 0, 0],
   [0, 255, 0],
@@ -86,10 +89,10 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const opacity = 0.5;
+  ctx.lineWidth = LINE_WIDTH;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
-    ctx.fillStyle = `rgba(${[...color, opacity].join(",")})`;
-    ctx.fillRect(bbox[0], bbox[1], bbox[2], bbox[3]);
+    ctx.strokeStyle = `rgba(${[...color, LINE_OPACITY].join(",")})`;
+    ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
   });
 });
 
