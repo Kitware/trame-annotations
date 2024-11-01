@@ -35,7 +35,10 @@ const TOOLTIP_PADDING = 12; // fudge to keep tooltip from clipping/overflowing. 
 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
-function doRectanglesOverlap(recA: Rectangle, recB: Rectangle): boolean {
+function doRectanglesOverlap(
+  recA: Rectangle<unknown>,
+  recB: Rectangle<unknown>,
+): boolean {
   const noHOverlap =
     recB.x >= recA.x + recA.width || recA.x >= recB.x + recB.width;
 
@@ -232,7 +235,7 @@ function mouseMove(e: MouseEvent) {
   });
   const hits = annotationsTree
     .retrieve(pixelRectangle)
-    .filter((rect: any) => doRectanglesOverlap(rect, pixelRectangle))
+    .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
     .filter((hit) => hit.data != undefined)
     .map((hit) => {
       const annotation = annotationsWithColor.value[hit.data!];
