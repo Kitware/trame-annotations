@@ -2,8 +2,9 @@
 import { ref, watchEffect, computed, onMounted, unref } from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
+import { useDevicePixelRatio } from "./utils.js";
 
-const CATEGORICAL_COLORS = [
+const CATEGORY_COLORS = [
   [255, 0, 0],
   [0, 255, 0],
   [0, 0, 255],
@@ -13,7 +14,7 @@ const CATEGORICAL_COLORS = [
 ] as const as readonly [number, number, number][];
 
 const LINE_OPACITY = 0.9;
-const LINE_WIDTH = 2; // in pixels
+const LINE_WIDTH = 4; // in pixels
 
 type Box = [number, number, number, number];
 
@@ -81,10 +82,13 @@ const annotations = computed(() => unref(props.annotations) ?? []);
 const annotationsWithColor = computed(() => {
   return annotations.value.map((annotation) => {
     const mutex = annotation.category_id ?? 0;
-    const color = CATEGORICAL_COLORS[mutex % CATEGORICAL_COLORS.length];
+    const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
     return { ...annotation, color };
   });
 });
+
+const dpi = useDevicePixelRatio();
+const lineWidth = computed(() => LINE_WIDTH * dpi.pixelRatio.value);
 
 // draw visible annotations
 watchEffect(() => {
@@ -98,7 +102,7 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineWidth = lineWidth.value;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
     ctx.strokeStyle = `rgba(${[...color, LINE_OPACITY].join(",")})`;
     ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
