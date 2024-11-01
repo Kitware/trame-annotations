@@ -2,6 +2,29 @@
 
 
 
+## v0.1.1 (2024-11-01)
+
+### Fix
+
+* fix(ImageDetection): increase annotation line width
+
+Also, factor window DPI into line width. ([`c019056`](https://github.com/Kitware/trame-annotations/commit/c019056be5793074bb196e6224a543bbcbc7d086))
+
+### Refactor
+
+* refactor(vue-components): dont allow any type ([`e28ad57`](https://github.com/Kitware/trame-annotations/commit/e28ad57e16910e9eab7fae137b0e04189dcff506))
+
+* refactor(vue-components): flatten directory structure ([`f1d999f`](https://github.com/Kitware/trame-annotations/commit/f1d999fa52061eb380dec55f8130ebc8ebeb6c98))
+
+* refactor(ImageDetection): typecheck files and update npm dependencies ([`39ac0a0`](https://github.com/Kitware/trame-annotations/commit/39ac0a081ea5e131e0d5d2813dd44811e25d592e))
+
+### Unknown
+
+* Merge pull request #3 from Kitware/mor-colors
+
+Increase annotation line width ([`715aa58`](https://github.com/Kitware/trame-annotations/commit/715aa58e9a51fb3d33ecb63987c54c19f79cfd27))
+
+
 ## v0.1.0 (2024-10-31)
 
 ### Chore
