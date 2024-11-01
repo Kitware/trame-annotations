@@ -2,20 +2,33 @@
 import { ref, watchEffect, computed, onMounted, unref } from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
+import { useDevicePixelRatio } from "./utils.js";
 
-import type { Annotation, Category, Vector3 } from "../types/index.ts";
-
-const LINE_OPACITY = 0.9;
-const LINE_WIDTH = 2; // in pixels
-
-const CATEGORY_COLORS: Vector3<number>[] = [
+const CATEGORY_COLORS = [
   [255, 0, 0],
   [0, 255, 0],
   [0, 0, 255],
   [255, 255, 0],
   [255, 0, 255],
   [0, 255, 255],
-];
+] as const as readonly [number, number, number][];
+
+const LINE_OPACITY = 0.9;
+const LINE_WIDTH = 4; // in pixels
+
+type Box = [number, number, number, number];
+
+type Annotation = {
+  id: number;
+  category_id: number;
+  label: string; // fallback if category_id has no match
+  bbox: Box;
+};
+
+type Category = {
+  id: number;
+  name: string;
+};
 
 const TOOLTIP_OFFSET = [8, 8];
 const TOOLTIP_PADDING = 12; // fudge to keep tooltip from clipping/overflowing. In pixels
@@ -23,8 +36,8 @@ const TOOLTIP_PADDING = 12; // fudge to keep tooltip from clipping/overflowing. 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
 function doRectanglesOverlap(
-  recA: Rectangle<any>,
-  recB: Rectangle<any>,
+  recA: Rectangle<unknown>,
+  recB: Rectangle<unknown>,
 ): boolean {
   const noHOverlap =
     recB.x >= recA.x + recA.width || recA.x >= recB.x + recB.width;
@@ -77,6 +90,9 @@ const annotationsWithColor = computed(() => {
   });
 });
 
+const dpi = useDevicePixelRatio();
+const lineWidth = computed(() => LINE_WIDTH * dpi.pixelRatio.value);
+
 // draw visible annotations
 watchEffect(() => {
   if (!visibleCanvas.value || !visibleCtx.value) {
@@ -89,7 +105,7 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.lineWidth = LINE_WIDTH;
+  ctx.lineWidth = lineWidth.value;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
     ctx.strokeStyle = `rgba(${[...color, LINE_OPACITY].join(",")})`;
     ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
@@ -116,7 +132,7 @@ watchEffect(() => {
   });
 
   annotations.value.forEach((annotation, i) => {
-    const treeNode = new Rectangle<number>({
+    const treeNode = new Rectangle({
       x: annotation.bbox[0],
       y: annotation.bbox[1],
       width: annotation.bbox[2],
@@ -211,7 +227,7 @@ function mouseMove(e: MouseEvent) {
 
   labelContainer.value.style.visibility = "visible";
 
-  const pixelRectangle = new Rectangle<number>({
+  const pixelRectangle = new Rectangle({
     x: pixelX,
     y: pixelY,
     width: 2,
@@ -219,7 +235,7 @@ function mouseMove(e: MouseEvent) {
   });
   const hits = annotationsTree
     .retrieve(pixelRectangle)
-    .filter((rect: any) => doRectanglesOverlap(rect, pixelRectangle))
+    .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
     .filter((hit) => hit.data != undefined)
     .map((hit) => {
       const annotation = annotationsWithColor.value[hit.data!];

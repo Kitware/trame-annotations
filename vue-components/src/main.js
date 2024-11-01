@@ -1,7 +1,11 @@
-import components from "./components";
+import ImageDetection from "./ImageDetection.vue";
+
+const components = {
+  ImageDetection,
+};
 
 export function install(Vue) {
-  Object.keys(components).forEach((name) => {
-    Vue.component(name, components[name]);
+  Object.entries(components).forEach(([name, component]) => {
+    Vue.component(name, component);
   });
 }
