@@ -2,7 +2,7 @@
 import { ref, watchEffect, computed, onMounted, unref } from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
-import { useDevicePixelRatio } from "./utils.js";
+import { useDevicePixelRatio, useResizeObserver } from "./utils.js";
 
 const CATEGORY_COLORS = [
   [255, 0, 0],
@@ -14,7 +14,7 @@ const CATEGORY_COLORS = [
 ] as const as readonly [number, number, number][];
 
 const LINE_OPACITY = 0.9;
-const LINE_WIDTH = 4; // in pixels
+const LINE_WIDTH = 2; // in pixels
 
 type Box = [number, number, number, number];
 
@@ -31,7 +31,7 @@ type Category = {
 };
 
 const TOOLTIP_OFFSET = [8, 8];
-const TOOLTIP_PADDING = 12; // fudge to keep tooltip from clipping/overflowing. In pixels
+const TOOLTIP_PADDING = 16; // fudge to keep tooltip from clipping/overflowing. In pixels
 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
@@ -91,7 +91,17 @@ const annotationsWithColor = computed(() => {
 });
 
 const dpi = useDevicePixelRatio();
-const lineWidth = computed(() => LINE_WIDTH * dpi.pixelRatio.value);
+
+const { width } = useResizeObserver(visibleCanvas);
+
+const displayScale = computed(() => {
+  if (!visibleCanvas.value) return 1;
+  return imageSize.value.width / width.value;
+});
+
+const lineWidth = computed(
+  () => LINE_WIDTH * dpi.pixelRatio.value * displayScale.value,
+);
 
 // draw visible annotations
 watchEffect(() => {
