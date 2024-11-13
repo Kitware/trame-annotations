@@ -59,6 +59,8 @@ const props = defineProps<{
   categories: { [key: number]: Category };
   selected: boolean;
   containerSelector?: string;
+  lineWidth?: number;
+  lineOpacity?: number;
 }>();
 
 const visibleCanvas = ref<HTMLCanvasElement>();
@@ -99,10 +101,12 @@ const displayScale = computed(() => {
   return imageSize.value.width / width.value;
 });
 
-const lineWidth = computed(
-  () => LINE_WIDTH * dpi.pixelRatio.value * displayScale.value,
+const lineWidthInDisplay = computed(
+  () =>
+    props.lineWidth ?? LINE_WIDTH * dpi.pixelRatio.value * displayScale.value,
 );
 
+const lineOpacity = computed(() => props.lineOpacity ?? LINE_OPACITY);
 // draw visible annotations
 watchEffect(() => {
   if (!visibleCanvas.value || !visibleCtx.value) {
@@ -115,9 +119,10 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.lineWidth = lineWidth.value;
+  ctx.lineWidth = lineWidthInDisplay.value;
+  const alpha = lineOpacity.value;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
-    ctx.strokeStyle = `rgba(${[...color, LINE_OPACITY].join(",")})`;
+    ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
     ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
   });
 });
