@@ -28,6 +28,8 @@ class ImageDetection(HtmlElement):
             "categories",
             "selected",
             ("container_selector", "containerSelector"),
+            ("line_width", "lineWidth"),
+            ("line_opacity", "lineOpacity"),
         ]
         self._event_names += [
             "hover",

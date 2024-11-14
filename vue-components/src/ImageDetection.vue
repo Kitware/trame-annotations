@@ -2,7 +2,7 @@
 import { ref, watchEffect, computed, onMounted, unref } from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
-import { useDevicePixelRatio } from "./utils.js";
+import { useDevicePixelRatio, useResizeObserver } from "./utils.js";
 
 const CATEGORY_COLORS = [
   [255, 0, 0],
@@ -14,7 +14,7 @@ const CATEGORY_COLORS = [
 ] as const as readonly [number, number, number][];
 
 const LINE_OPACITY = 0.9;
-const LINE_WIDTH = 4; // in pixels
+const LINE_WIDTH = 2; // in pixels
 
 type Box = [number, number, number, number];
 
@@ -31,7 +31,7 @@ type Category = {
 };
 
 const TOOLTIP_OFFSET = [8, 8];
-const TOOLTIP_PADDING = 12; // fudge to keep tooltip from clipping/overflowing. In pixels
+const TOOLTIP_PADDING = 16; // fudge to keep tooltip from clipping/overflowing. In pixels
 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
@@ -59,6 +59,8 @@ const props = defineProps<{
   categories: { [key: number]: Category };
   selected: boolean;
   containerSelector?: string;
+  lineWidth?: number;
+  lineOpacity?: number;
 }>();
 
 const visibleCanvas = ref<HTMLCanvasElement>();
@@ -91,8 +93,23 @@ const annotationsWithColor = computed(() => {
 });
 
 const dpi = useDevicePixelRatio();
-const lineWidth = computed(() => LINE_WIDTH * dpi.pixelRatio.value);
 
+const { width } = useResizeObserver(visibleCanvas);
+
+const displayScale = computed(() => {
+  if (!visibleCanvas.value) return 1;
+  return imageSize.value.width / width.value;
+});
+
+const validLineWidth = computed(() => {
+  return props.lineWidth ?? LINE_WIDTH;
+});
+
+const lineWidthInDisplay = computed(
+  () => validLineWidth.value * dpi.pixelRatio.value * displayScale.value,
+);
+
+const lineOpacity = computed(() => props.lineOpacity ?? LINE_OPACITY);
 // draw visible annotations
 watchEffect(() => {
   if (!visibleCanvas.value || !visibleCtx.value) {
@@ -105,9 +122,11 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.lineWidth = lineWidth.value;
+  ctx.globalCompositeOperation = "lighter"; // additive blend mode
+  ctx.lineWidth = lineWidthInDisplay.value;
+  const alpha = lineOpacity.value;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
-    ctx.strokeStyle = `rgba(${[...color, LINE_OPACITY].join(",")})`;
+    ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
     ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
   });
 });
