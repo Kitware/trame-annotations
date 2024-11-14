@@ -2,6 +2,30 @@
 
 
 
+## v0.2.0 (2024-11-14)
+
+### Feature
+
+* feat(ImageDetection): additive blend mode for annotations ([`873accc`](https://github.com/Kitware/trame-annotations/commit/873accc072760681dfb9ad9ae4fcce9e980dc25e))
+
+* feat(ImageDetection): add line_width and line_opacity props ([`ea6aaa3`](https://github.com/Kitware/trame-annotations/commit/ea6aaa303f388a7e461d3c0aab7dcf1ac9dafaa2))
+
+### Fix
+
+* fix(ImageDetection): fallback to line width default correctly ([`cb3c237`](https://github.com/Kitware/trame-annotations/commit/cb3c237529740a420ecb97046ef5a6ec750c834e))
+
+* fix(ImageDetection): set bbox line width in display pixels
+
+If an image was large, but displayed at a smaller size,
+the bounding box line was very thin and hard to see. ([`fd74d92`](https://github.com/Kitware/trame-annotations/commit/fd74d92c5a6c88725de37708b9a2f5a702e59731))
+
+### Unknown
+
+* Merge pull request #4 from Kitware/line-width
+
+Box line width in display pixels ([`71f4d5a`](https://github.com/Kitware/trame-annotations/commit/71f4d5aa8640f580c1a1399bb8d9c6f7e1bf34d8))
+
+
 ## v0.1.1 (2024-11-01)
 
 ### Fix
