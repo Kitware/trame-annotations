@@ -122,6 +122,7 @@ watchEffect(() => {
   canvas.height = imageSize.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  ctx.globalCompositeOperation = "lighter"; // additive blend mode
   ctx.lineWidth = lineWidthInDisplay.value;
   const alpha = lineOpacity.value;
   annotationsWithColor.value.forEach(({ color, bbox }) => {
