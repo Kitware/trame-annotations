@@ -101,9 +101,12 @@ const displayScale = computed(() => {
   return imageSize.value.width / width.value;
 });
 
+const validLineWidth = computed(() => {
+  return props.lineWidth ?? LINE_WIDTH;
+});
+
 const lineWidthInDisplay = computed(
-  () =>
-    props.lineWidth ?? LINE_WIDTH * dpi.pixelRatio.value * displayScale.value,
+  () => validLineWidth.value * dpi.pixelRatio.value * displayScale.value,
 );
 
 const lineOpacity = computed(() => props.lineOpacity ?? LINE_OPACITY);

@@ -23,22 +23,23 @@ class ImageDetectionExample:
         if self.server.hot_reload:
             extra_args["reload"] = self._build_ui
 
-        annotation = (
-            [
-                {
-                    "id": 1,
-                    "category_id": 0,
-                    "label": "my category",
-                    "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
-                },
-                {
-                    "id": 99,
-                    "category_id": 1,
-                    "label": "fallback label",
-                    "bbox": [140, 100, 100, 100],
-                },
-            ],
-        )
+        self.server.state.annotations = [
+            {
+                "id": 1,
+                "category_id": 0,
+                "label": "if matching category, should not be shown",
+                "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
+            },
+            {
+                "id": 99,
+                "category_id": 1,
+                "label": "fallback label",
+                "bbox": [140, 100, 100, 100],
+            },
+        ]
+
+        self.server.state.categories = [{"id": 1, "name": "my category"}]
+
         with VAppLayout(self.server, full_height=True) as self.ui:
             with VLayout():
                 with html.Div(
@@ -47,27 +48,21 @@ class ImageDetectionExample:
                 ):
                     ImageDetection(
                         src="https://placecats.com/300/200",
-                        annotations=(annotation),
-                        categories=(
-                            [
-                                {
-                                    "id": 1,
-                                    "name": "my category",
-                                },
-                            ],
-                        ),
+                        annotations=("annotations",),
+                        categories=("categories",),
+                        line_width=20,
+                        line_opacity=0.5,
                         identifier="my_image_id",
                         selected=("'my_image_id' === selected_id",),
                         hover=(self._on_image_hover, "[$event]"),
                         container_selector="#image-gallery",  # keeps annotation tooltip inside of selector target
                     )
                     ImageDetection(
-                        line_width=20,
-                        line_opacity=0.5,
-                        src="https://placecats.com/300/200",
-                        annotations=(annotation),
-                        identifier="my_image_id",
-                        selected=("'my_image_id' === selected_id",),
+                        style="width: 200px;",
+                        src="https://placecats.com/500/500",
+                        annotations=("annotations",),
+                        identifier="bigger_but_smaller",
+                        selected=("'bigger_but_smaller' === selected_id",),
                         hover=(self._on_image_hover, "[$event]"),
                         container_selector="#image-gallery",  # keeps annotation tooltip inside of selector target
                     )
