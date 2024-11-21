@@ -8,20 +8,40 @@ from trame_annotations.widgets.annotations import ImageDetection
 
 ANNOTATIONS = [
     {
-        "id": 1,
+        "id": 0,
         "category_id": 0,
         "label": "if matching category, should not be shown",
         "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
     },
     {
-        "id": 99,
+        "id": 1,
         "category_id": 1,
         "label": "fallback label",
         "bbox": [140, 100, 100, 100],
     },
 ]
 
-CATEGORIES = [{"id": 1, "name": "my category"}]
+CLASSIFICATIONS = [
+    {
+        "id": 2,
+        "category_id": 0,
+        "label": "if matching category, should not be shown",
+    },
+    {
+        "id": 3,
+        "category_id": 1,
+        "label": "fallback label",
+    },
+    {
+        "id": 4,
+        "category_id": 2,
+        "label": "another fallback label",
+    },
+]
+
+BOXES_AND_CLASSES = ANNOTATIONS + CLASSIFICATIONS
+
+CATEGORIES = {0: {"name": "my category"}}
 
 
 @TrameApp()
@@ -58,12 +78,23 @@ class ImageDetectionExample:
                     )
                     ImageDetection(
                         style="width: 200px;",
-                        src="https://placecats.com/500/500",
+                        src="https://placecats.com/300/200",
                         annotations=("annotations", ANNOTATIONS),
                         identifier="bigger_but_smaller",
                         selected=("'bigger_but_smaller' === selected_id",),
                         hover=(self._on_image_hover, "[$event]"),
-                        container_selector="#image-gallery",  # keeps annotation tooltip inside of selector target
+                        container_selector="#image-gallery",
+                    )
+                    ImageDetection(
+                        src="https://placecats.com/200/200",
+                        annotations=("classifications", CLASSIFICATIONS),
+                        container_selector="#image-gallery",
+                    )
+                    ImageDetection(
+                        src="https://placecats.com/200/200",
+                        categories=("categories", CATEGORIES),
+                        annotations=("both", BOXES_AND_CLASSES),
+                        container_selector="#image-gallery",
                     )
 
 
