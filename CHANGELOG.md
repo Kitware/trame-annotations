@@ -2,6 +2,19 @@
 
 
 
+## v0.3.0 (2024-11-22)
+
+### Feature
+
+* feat(ImageDetection): add whole image classification support ([`3177d19`](https://github.com/Kitware/trame-annotations/commit/3177d19327947fd8f91927bbec14767ce1f4236a))
+
+### Unknown
+
+* Merge pull request #5 from Kitware/classes
+
+feat(ImageDetection): add whole image classification support ([`0ba98f3`](https://github.com/Kitware/trame-annotations/commit/0ba98f33515ba4dcd0205a95740d385430b0b25e))
+
+
 ## v0.2.0 (2024-11-14)
 
 ### Feature
