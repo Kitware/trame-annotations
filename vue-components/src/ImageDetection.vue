@@ -1,32 +1,55 @@
 <script setup lang="ts">
-import { ref, watchEffect, computed, onMounted, unref } from "vue";
+import {
+  ref,
+  watchEffect,
+  computed,
+  onMounted,
+  unref,
+  type MaybeRef,
+} from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
 import { useDevicePixelRatio, useResizeObserver } from "./utils.js";
 
-const CATEGORY_COLORS = [
+type Color = readonly [number, number, number];
+
+const CATEGORY_COLORS: Color[] = [
   [255, 0, 0],
   [0, 255, 0],
   [0, 0, 255],
   [255, 255, 0],
   [255, 0, 255],
   [0, 255, 255],
-] as const as readonly [number, number, number][];
+];
 
 const LINE_OPACITY = 0.9;
 const LINE_WIDTH = 2; // in pixels
 
 type Box = [number, number, number, number];
 
-type Annotation = {
-  id: number;
+type Classification = {
   category_id: number;
-  label: string; // fallback if category_id has no match
+  id?: number;
+  label?: string; // fallback if category_id has no match
+};
+
+type BoxAnnotation = Classification & {
   bbox: Box;
 };
 
+type Annotation = Classification | BoxAnnotation;
+
+type ClassificationWithColor = Classification & {
+  color: Color;
+};
+
+type BoxAnnotationWithColor = BoxAnnotation & {
+  color: Color;
+};
+
+type AnnotationWithColor = ClassificationWithColor | BoxAnnotationWithColor;
+
 type Category = {
-  id: number;
   name: string;
 };
 
@@ -53,15 +76,22 @@ function doRectanglesOverlap(
 }
 
 const props = defineProps<{
-  identifier: string;
-  src: string;
-  annotations?: Annotation[];
-  categories: { [key: number]: Category };
-  selected: boolean;
-  containerSelector?: string;
-  lineWidth?: number;
-  lineOpacity?: number;
+  identifier: MaybeRef<string>;
+  src: MaybeRef<string>;
+  annotations?: MaybeRef<Annotation[]> | null;
+  categories?: MaybeRef<Record<PropertyKey, Category>> | null;
+  containerSelector?: MaybeRef<string> | null;
+  lineWidth?: MaybeRef<number> | null;
+  lineOpacity?: MaybeRef<number> | null;
+  selected?: MaybeRef<boolean>;
 }>();
+
+// withDefaults, toRefs, and handle null | Refs
+const annotations = computed(() => unref(props.annotations) ?? []);
+const categories = computed(() => unref(props.categories) ?? {});
+const containerSelector = computed(() => unref(props.containerSelector) ?? "");
+const lineOpacity = computed(() => unref(props.lineOpacity) ?? LINE_OPACITY);
+const lineWidth = computed(() => unref(props.lineWidth) ?? LINE_WIDTH);
 
 const visibleCanvas = ref<HTMLCanvasElement>();
 const visibleCtx = computed(() =>
@@ -71,7 +101,7 @@ const pickingCanvas = ref<HTMLCanvasElement>();
 const pickingCtx = computed(() =>
   pickingCanvas.value?.getContext("2d", { willReadFrequently: true }),
 );
-const labelContainer = ref<HTMLDivElement>();
+const labelContainer = ref<HTMLUListElement>();
 
 const imageSize = ref({ width: 0, height: 0 });
 const img = ref<HTMLImageElement>();
@@ -82,8 +112,6 @@ const onImageLoad = () => {
   };
 };
 
-const annotations = computed(() => unref(props.annotations) ?? []);
-
 const annotationsWithColor = computed(() => {
   return annotations.value.map((annotation) => {
     const mutex = annotation.category_id ?? 0;
@@ -91,6 +119,26 @@ const annotationsWithColor = computed(() => {
     return { ...annotation, color };
   });
 });
+
+const annotationsByType = computed(() =>
+  annotationsWithColor.value.reduce(
+    (acc, annotation) => {
+      if ("bbox" in annotation) {
+        acc.boxAnnotations.push(annotation);
+      } else {
+        acc.classifications.push(annotation);
+      }
+      return acc;
+    },
+    {
+      boxAnnotations: [] as BoxAnnotationWithColor[],
+      classifications: [] as ClassificationWithColor[],
+    },
+  ),
+);
+
+const boxAnnotations = computed(() => annotationsByType.value.boxAnnotations);
+const classifications = computed(() => annotationsByType.value.classifications);
 
 const dpi = useDevicePixelRatio();
 
@@ -101,15 +149,10 @@ const displayScale = computed(() => {
   return imageSize.value.width / width.value;
 });
 
-const validLineWidth = computed(() => {
-  return props.lineWidth ?? LINE_WIDTH;
-});
-
 const lineWidthInDisplay = computed(
-  () => validLineWidth.value * dpi.pixelRatio.value * displayScale.value,
+  () => lineWidth.value * dpi.pixelRatio.value * displayScale.value,
 );
 
-const lineOpacity = computed(() => props.lineOpacity ?? LINE_OPACITY);
 // draw visible annotations
 watchEffect(() => {
   if (!visibleCanvas.value || !visibleCtx.value) {
@@ -125,7 +168,7 @@ watchEffect(() => {
   ctx.globalCompositeOperation = "lighter"; // additive blend mode
   ctx.lineWidth = lineWidthInDisplay.value;
   const alpha = lineOpacity.value;
-  annotationsWithColor.value.forEach(({ color, bbox }) => {
+  boxAnnotations.value.forEach(({ color, bbox }) => {
     ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
     ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
   });
@@ -150,7 +193,7 @@ watchEffect(() => {
     maxObjects: 10,
   });
 
-  annotations.value.forEach((annotation, i) => {
+  boxAnnotations.value.forEach((annotation, i) => {
     const treeNode = new Rectangle({
       x: annotation.bbox[0],
       y: annotation.bbox[1],
@@ -186,7 +229,7 @@ function hideLabel() {
 onMounted(hideLabel);
 
 function mouseEnter() {
-  emit("hover", { id: props.identifier });
+  emit("hover", { id: unref(props.identifier) });
 }
 function mouseLeave() {
   emit("hover", { id: "" });
@@ -211,9 +254,28 @@ onMounted(() => {
   mounted.value = true;
 });
 const container = computed(() => {
-  if (!mounted.value || !props.containerSelector) return null;
-  return document.querySelector(props.containerSelector);
+  if (!mounted.value || !containerSelector.value) return null;
+  return document.querySelector(containerSelector.value);
 });
+
+const makeAnnotationLabel = (annotation: AnnotationWithColor) => {
+  const { category_id, label, color } = annotation;
+  const name = categories.value[category_id]?.name ?? label ?? "Unknown";
+
+  const category = document.createElement("li");
+  const dot = document.createElement("span");
+  dot.style.backgroundColor = `rgb(${color.join(",")})`;
+  dot.style.width = "10px";
+  dot.style.height = "10px";
+  dot.style.borderRadius = "50%";
+  dot.style.display = "inline-block";
+  dot.style.marginRight = "0.4rem";
+  category.appendChild(dot);
+  const text = document.createElement("span");
+  text.textContent = name;
+  category.appendChild(text);
+  return category;
+};
 
 function mouseMove(e: MouseEvent) {
   if (
@@ -221,7 +283,7 @@ function mouseMove(e: MouseEvent) {
     pickingCanvas.value.width === 0 ||
     !labelContainer.value ||
     !annotationsTree ||
-    !props.categories ||
+    !categories.value ||
     !props.annotations
   ) {
     return;
@@ -257,16 +319,10 @@ function mouseMove(e: MouseEvent) {
     .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
     .filter((hit) => hit.data != undefined)
     .map((hit) => {
-      const annotation = annotationsWithColor.value[hit.data!];
-      const name =
-        props.categories[annotation.category_id]?.name ?? annotation.label;
-      const color = annotation.color;
-      const category = document.createElement("li");
-      category.style.textShadow = `rgba(${color.join(",")},0.6) 1px 1px 3px`;
-      const annotationId = annotation.id ? ` : ${annotation.id}` : "";
-      category.textContent = `${name}${annotationId}`;
-      return category;
-    });
+      const annotation = boxAnnotations.value[hit.data!];
+      return annotation;
+    })
+    .map(makeAnnotationLabel);
 
   labelContainer.value.replaceChildren(...hits);
 
@@ -309,6 +365,20 @@ function mouseMove(e: MouseEvent) {
   labelContainer.value.style.top = `${posY}px`;
 }
 
+const classificationsContainer = ref<HTMLUListElement>();
+
+watchEffect(() => {
+  if (!classificationsContainer.value) return;
+  if (!classifications.value.length) {
+    classificationsContainer.value.style.visibility = "hidden";
+    return;
+  }
+  classificationsContainer.value.style.visibility = "visible";
+  classificationsContainer.value.replaceChildren(
+    ...classifications.value.map(makeAnnotationLabel),
+  );
+});
+
 const borderSize = computed(() => (props.selected ? "4" : "0"));
 
 const src = computed(() => unref(props.src));
@@ -346,7 +416,26 @@ const src = computed(() => unref(props.src));
         border-color: rgba(127, 127, 127, 0.75);
         border-style: solid;
         border-width: thin;
-        background-color: #efefef;
+        background-color: white;
+        list-style-type: none;
+      "
+    />
+    <ul
+      ref="classificationsContainer"
+      style="
+        top: 0.4rem;
+        left: 0.4rem;
+        margin: 0;
+        pointer-events: none;
+        position: absolute;
+        padding: 0.4rem;
+        white-space: pre;
+        font-size: small;
+        border-radius: 0.2rem;
+        border-color: rgba(127, 127, 127, 0.75);
+        border-style: solid;
+        border-width: thin;
+        background-color: white;
         list-style-type: none;
       "
     />
