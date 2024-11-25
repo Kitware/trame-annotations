@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import {
-  ref,
-  watchEffect,
-  computed,
-  onMounted,
-  unref,
-  type MaybeRef,
-} from "vue";
+import { ref, watchEffect, computed, unref, type MaybeRef } from "vue";
 
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
-import { useDevicePixelRatio, useResizeObserver } from "./utils.js";
+import {
+  useDevicePixelRatio,
+  useResizeObserver,
+  useSelector,
+  useTooltipPositioning,
+} from "./utils.js";
 
 type Color = readonly [number, number, number];
 
@@ -41,10 +39,12 @@ type Annotation = Classification | BoxAnnotation;
 
 type ClassificationWithColor = Classification & {
   color: Color;
+  name: string;
 };
 
 type BoxAnnotationWithColor = BoxAnnotation & {
   color: Color;
+  name: string;
 };
 
 type AnnotationWithColor = ClassificationWithColor | BoxAnnotationWithColor;
@@ -52,9 +52,6 @@ type AnnotationWithColor = ClassificationWithColor | BoxAnnotationWithColor;
 type Category = {
   name: string;
 };
-
-const TOOLTIP_OFFSET = [8, 8];
-const TOOLTIP_PADDING = 16; // fudge to keep tooltip from clipping/overflowing. In pixels
 
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
@@ -75,15 +72,17 @@ function doRectanglesOverlap(
   return !noVOverlap;
 }
 
+type TrameProp<T> = MaybeRef<T | null>;
+
 const props = defineProps<{
-  identifier: MaybeRef<string>;
-  src: MaybeRef<string>;
-  annotations?: MaybeRef<Annotation[]> | null;
-  categories?: MaybeRef<Record<PropertyKey, Category>> | null;
-  containerSelector?: MaybeRef<string> | null;
-  lineWidth?: MaybeRef<number> | null;
-  lineOpacity?: MaybeRef<number> | null;
-  selected?: MaybeRef<boolean>;
+  identifier?: TrameProp<string>;
+  src: TrameProp<string>;
+  annotations?: TrameProp<Annotation[]>;
+  categories?: TrameProp<Record<PropertyKey, Category>>;
+  containerSelector?: TrameProp<string>;
+  lineWidth?: TrameProp<number>;
+  lineOpacity?: TrameProp<number>;
+  selected?: TrameProp<boolean>;
 }>();
 
 // withDefaults, toRefs, and handle null | Refs
@@ -114,9 +113,12 @@ const onImageLoad = () => {
 
 const annotationsWithColor = computed(() => {
   return annotations.value.map((annotation) => {
-    const mutex = annotation.category_id ?? 0;
+    const { category_id, label } = annotation;
+    const mutex = category_id ?? 0;
     const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
-    return { ...annotation, color };
+
+    const name = categories.value[category_id]?.name ?? label ?? "Unknown";
+    return { ...annotation, color, name };
   });
 });
 
@@ -142,11 +144,11 @@ const classifications = computed(() => annotationsByType.value.classifications);
 
 const dpi = useDevicePixelRatio();
 
-const { width } = useResizeObserver(visibleCanvas);
+const rect = useResizeObserver(visibleCanvas);
 
 const displayScale = computed(() => {
   if (!visibleCanvas.value) return 1;
-  return imageSize.value.width / width.value;
+  return imageSize.value.width / rect.value.width;
 });
 
 const lineWidthInDisplay = computed(
@@ -222,18 +224,19 @@ type Events = {
 
 const emit = defineEmits<Events>();
 
-function hideLabel() {
-  if (labelContainer.value) labelContainer.value.style.visibility = "hidden";
-}
-
-onMounted(hideLabel);
+const mouseInComponent = ref(false);
 
 function mouseEnter() {
-  emit("hover", { id: unref(props.identifier) });
+  const id = unref(props.identifier);
+  if (id != undefined) {
+    emit("hover", { id });
+  }
+  mouseInComponent.value = true;
 }
+
 function mouseLeave() {
   emit("hover", { id: "" });
-  hideLabel();
+  mouseInComponent.value = false;
 }
 
 function displayToPixel(
@@ -249,33 +252,9 @@ function displayToPixel(
   return [pixelX, pixelY];
 }
 
-const mounted = ref(false);
-onMounted(() => {
-  mounted.value = true;
-});
-const container = computed(() => {
-  if (!mounted.value || !containerSelector.value) return null;
-  return document.querySelector(containerSelector.value);
-});
+const hoveredBoxAnnotations = ref<AnnotationWithColor[]>([]);
 
-const makeAnnotationLabel = (annotation: AnnotationWithColor) => {
-  const { category_id, label, color } = annotation;
-  const name = categories.value[category_id]?.name ?? label ?? "Unknown";
-
-  const category = document.createElement("li");
-  const dot = document.createElement("span");
-  dot.style.backgroundColor = `rgb(${color.join(",")})`;
-  dot.style.width = "10px";
-  dot.style.height = "10px";
-  dot.style.borderRadius = "50%";
-  dot.style.display = "inline-block";
-  dot.style.marginRight = "0.4rem";
-  category.appendChild(dot);
-  const text = document.createElement("span");
-  text.textContent = name;
-  category.appendChild(text);
-  return category;
-};
+const mousePos = ref({ x: 0, y: 0 });
 
 function mouseMove(e: MouseEvent) {
   if (
@@ -298,15 +277,6 @@ function mouseMove(e: MouseEvent) {
     e.clientY,
     pickingCanvas.value,
   );
-  const pixelValue = ctx.getImageData(pixelX, pixelY, 1, 1).data[0];
-  const pickedSomething = pixelValue > 0;
-
-  if (!pickedSomething) {
-    labelContainer.value.style.visibility = "hidden";
-    return;
-  }
-
-  labelContainer.value.style.visibility = "visible";
 
   const pixelRectangle = new Rectangle({
     x: pixelX,
@@ -314,78 +284,67 @@ function mouseMove(e: MouseEvent) {
     width: 2,
     height: 2,
   });
+
   const hits = annotationsTree
     .retrieve(pixelRectangle)
     .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
-    .filter((hit) => hit.data != undefined)
-    .map((hit) => {
-      const annotation = boxAnnotations.value[hit.data!];
-      return annotation;
-    })
-    .map(makeAnnotationLabel);
+    .map((hit) => hit.data)
+    .filter((annoIndex) => annoIndex != undefined)
+    .map((annoIndex) => boxAnnotations.value[annoIndex]);
 
-  labelContainer.value.replaceChildren(...hits);
+  hoveredBoxAnnotations.value = hits;
 
-  // Position the tooltip
-  const [x, y] = [e.offsetX, e.offsetY];
-  let posX = x + TOOLTIP_OFFSET[0];
-  let posY = y + TOOLTIP_OFFSET[1];
-
-  const tooltipRect = labelContainer.value.getBoundingClientRect();
-  const parentRect = pickingCanvas.value.getBoundingClientRect();
-  const containerRect = container.value?.getBoundingClientRect() ?? {
-    left: 0,
-    top: 0,
-    width: window.innerWidth,
-    height: window.innerHeight,
+  mousePos.value = {
+    x: e.clientX,
+    y: e.clientY,
   };
-
-  const toolTipInContainer = {
-    left: parentRect.left + posX - containerRect.left,
-    top: parentRect.top + posY - containerRect.top,
-    width: tooltipRect.width + TOOLTIP_PADDING,
-    height: tooltipRect.height + TOOLTIP_PADDING,
-  };
-
-  // if text goes off the edge, move up and/or left
-  if (
-    toolTipInContainer.left + toolTipInContainer.width >
-    containerRect.width
-  ) {
-    posX = x - tooltipRect.width - TOOLTIP_OFFSET[0];
-  }
-  if (
-    toolTipInContainer.top + toolTipInContainer.height >
-    containerRect.height
-  ) {
-    posY = y - tooltipRect.height - TOOLTIP_OFFSET[1];
-  }
-
-  labelContainer.value.style.left = `${posX}px`;
-  labelContainer.value.style.top = `${posY}px`;
 }
 
-const classificationsContainer = ref<HTMLUListElement>();
+const classesHovered = ref(false);
 
-watchEffect(() => {
-  if (!classificationsContainer.value) return;
-  if (!classifications.value.length) {
-    classificationsContainer.value.style.visibility = "hidden";
-    return;
+const popupAnnotations = computed(() => {
+  if (!mouseInComponent.value) return [];
+  if (classesHovered.value) return classifications.value;
+  return hoveredBoxAnnotations.value;
+});
+
+const classesDot = ref<HTMLDivElement>();
+
+const popupPosition = computed(() => {
+  if (classesHovered.value && classesDot.value) {
+    const { left, top, width, height } =
+      classesDot.value.getBoundingClientRect();
+    return { x: left + width / 2, y: top + height / 2 };
   }
-  classificationsContainer.value.style.visibility = "visible";
-  classificationsContainer.value.replaceChildren(
-    ...classifications.value.map(makeAnnotationLabel),
-  );
+  return mousePos.value;
+});
+
+const tooltipContainer = useSelector(containerSelector);
+
+const tooltipPosition = useTooltipPositioning(
+  labelContainer,
+  popupPosition,
+  pickingCanvas,
+  tooltipContainer,
+);
+
+const firstClassColor = computed(() => {
+  if (!classifications.value.length) return "transparent";
+  return `rgb(${classifications.value[0].color.join(",")})`;
 });
 
 const borderSize = computed(() => (props.selected ? "4" : "0"));
 
-const src = computed(() => unref(props.src));
+const src = computed(() => unref(props.src) ?? undefined);
 </script>
 
 <template>
-  <div style="position: relative">
+  <div
+    style="position: relative"
+    @mouseenter="mouseEnter"
+    @mousemove="mouseMove"
+    @mouseleave="mouseLeave"
+  >
     <img
       ref="img"
       :src="src"
@@ -400,44 +359,63 @@ const src = computed(() => unref(props.src));
     <canvas
       ref="pickingCanvas"
       style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
-      @mouseenter="mouseEnter"
-      @mousemove="mouseMove"
-      @mouseleave="mouseLeave"
     />
     <ul
       ref="labelContainer"
-      style="
-        position: absolute;
-        z-index: 10;
-        padding: 0.4rem;
-        white-space: pre;
-        font-size: small;
-        border-radius: 0.2rem;
-        border-color: rgba(127, 127, 127, 0.75);
-        border-style: solid;
-        border-width: thin;
-        background-color: white;
-        list-style-type: none;
-      "
-    />
-    <ul
-      ref="classificationsContainer"
-      style="
-        top: 0.4rem;
-        left: 0.4rem;
-        margin: 0;
-        pointer-events: none;
-        position: absolute;
-        padding: 0.4rem;
-        white-space: pre;
-        font-size: small;
-        border-radius: 0.2rem;
-        border-color: rgba(127, 127, 127, 0.75);
-        border-style: solid;
-        border-width: thin;
-        background-color: white;
-        list-style-type: none;
-      "
-    />
+      :style="{
+        position: 'absolute',
+        visibility: popupAnnotations.length ? 'visible' : 'hidden',
+        left: `${tooltipPosition.left}px`,
+        top: `${tooltipPosition.top}px`,
+        zIndex: 10,
+        padding: '0.4rem',
+        whiteSpace: 'pre',
+        fontSize: 'small',
+        borderRadius: '0.2rem',
+        borderColor: 'rgba(127, 127, 127, 0.75)',
+        borderStyle: 'solid',
+        borderWidth: 'thin',
+        backgroundColor: 'white',
+        listStyleType: 'none',
+        pointerEvents: 'none',
+        margin: 0,
+      }"
+    >
+      <li
+        v-for="annotation in popupAnnotations"
+        :key="annotation.id"
+        :style="{ display: 'flex', alignItems: 'center' }"
+      >
+        <span
+          :style="{
+            backgroundColor: `rgb(${annotation.color.join(',')})`,
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            display: 'inline-block',
+            marginRight: '0.4rem',
+          }"
+        ></span>
+        <span>{{ annotation.name }}</span>
+      </li>
+    </ul>
+    <div
+      v-if="classifications.length"
+      ref="classesDot"
+      style="position: absolute; top: 0.4rem; left: 0.4rem; margin: 0"
+    >
+      <span
+        :style="{
+          backgroundColor: firstClassColor,
+          width: '14px',
+          height: '14px',
+          borderRadius: '50%',
+          display: 'inline-block',
+          marginRight: '0.4rem',
+        }"
+        @mouseenter="classesHovered = true"
+        @mouseleave="classesHovered = false"
+      ></span>
+    </div>
   </div>
 </template>

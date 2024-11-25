@@ -4,6 +4,10 @@ import {
   getCurrentScope,
   onScopeDispose,
   watchEffect,
+  computed,
+  type MaybeRef,
+  onMounted,
+  unref,
 } from "vue";
 
 /**
@@ -50,8 +54,22 @@ export function useDevicePixelRatio() {
 
 export type UseDevicePixelRatioReturn = ReturnType<typeof useDevicePixelRatio>;
 
-export function useResizeObserver(element: Ref<HTMLElement | undefined>) {
-  const width = ref(0);
+type Rect = {
+  width: number;
+  height: number;
+  top: number;
+  left: number;
+};
+
+export function useResizeObserver(
+  element: Ref<HTMLElement | undefined | null>,
+) {
+  const rect = ref<Rect>({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+  });
   let observer: ResizeObserver | null = null;
   let currentElement: HTMLElement | undefined;
 
@@ -65,9 +83,9 @@ export function useResizeObserver(element: Ref<HTMLElement | undefined>) {
 
   const setupObserver = () => {
     observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        width.value = entry.contentRect.width;
-      }
+      const entry = entries[entries.length - 1];
+      const { width, height, top, left } = entry.target.getBoundingClientRect();
+      rect.value = { width, height, top, left };
     });
   };
 
@@ -87,12 +105,102 @@ export function useResizeObserver(element: Ref<HTMLElement | undefined>) {
 
     currentElement = element.value;
     observer?.observe(currentElement);
-    width.value = currentElement.clientWidth;
+    const { width, height, top, left } = currentElement.getBoundingClientRect();
+    rect.value = { width, height, top, left };
   });
 
   tryOnScopeDispose(cleanup);
 
-  return {
-    width,
-  };
+  return rect;
 }
+
+type Position = {
+  x: number;
+  y: number;
+};
+
+type TooltipPosition = {
+  left: number;
+  top: number;
+};
+
+export function useTooltipPositioning(
+  popup: Ref<HTMLElement | undefined | null>,
+  position: Ref<Position>,
+  parent: Ref<Element | undefined | null>,
+  container: Ref<Element | undefined | null>,
+  tooltipOffset: readonly [number, number] = [8, 8],
+  tooltipPadding: number = 16,
+) {
+  const popupRect = useResizeObserver(popup);
+
+  const tooltipPosition = computed<TooltipPosition>(() => {
+    const pos = position.value;
+
+    let left = pos.x + tooltipOffset[0];
+    let top = pos.y + tooltipOffset[1];
+
+    if (!popupRect.value || !parent.value) return { left, top };
+
+    const rect = popupRect.value;
+
+    const containerRect = container.value?.getBoundingClientRect() ?? {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+
+    const toolTipInContainer = {
+      left: left - containerRect.left,
+      top: top - containerRect.top,
+      width: rect.width + tooltipPadding,
+      height: rect.height + tooltipPadding,
+    };
+
+    // Adjust position to keep the tooltip within the container
+    if (
+      toolTipInContainer.left + toolTipInContainer.width >
+      containerRect.width
+    ) {
+      left = pos.x - rect.width - tooltipOffset[0];
+    }
+    if (left < containerRect.left) {
+      left = containerRect.left;
+    }
+
+    if (
+      toolTipInContainer.top + toolTipInContainer.height >
+      containerRect.height
+    ) {
+      top = pos.y - rect.height - tooltipOffset[1];
+    }
+    if (top < containerRect.top) {
+      top = containerRect.top;
+    }
+
+    // put in parent coordinates for absolute positioning
+    const parentRect = parent.value.getBoundingClientRect();
+    left -= parentRect.left;
+    top -= parentRect.top;
+
+    return { left, top };
+  });
+
+  return tooltipPosition;
+}
+
+export const useSelector = (query: MaybeRef<string>) => {
+  const mounted = ref(false);
+  onMounted(() => {
+    mounted.value = true;
+  });
+
+  const queryResult = computed(() => {
+    const q = unref(query);
+    if (!mounted.value || !q) return null;
+    return document.querySelector(q);
+  });
+
+  return queryResult;
+};

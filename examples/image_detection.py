@@ -10,7 +10,7 @@ ANNOTATIONS = [
     {
         "id": 0,
         "category_id": 0,
-        "label": "if matching category, should not be shown",
+        "label": "if matching category, should not be shown.  Also really long label",
         "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
     },
     {
@@ -25,7 +25,7 @@ CLASSIFICATIONS = [
     {
         "id": 2,
         "category_id": 0,
-        "label": "if matching category, should not be shown",
+        "label": "if matching category, should not be shown. Also really long label",
     },
     {
         "id": 3,
@@ -86,6 +86,7 @@ class ImageDetectionExample:
                         container_selector="#image-gallery",
                     )
                     ImageDetection(
+                        style="margin-left: 100px; width: 100px;",
                         src="https://placecats.com/200/200",
                         annotations=("classifications", CLASSIFICATIONS),
                         container_selector="#image-gallery",
