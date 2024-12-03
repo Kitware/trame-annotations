@@ -12,12 +12,16 @@ import {
 type Color = readonly [number, number, number];
 
 const CATEGORY_COLORS: Color[] = [
-  [255, 0, 0],
-  [0, 255, 0],
-  [0, 0, 255],
-  [255, 255, 0],
-  [255, 0, 255],
-  [0, 255, 255],
+  [255, 0, 0], // Red
+  [0, 255, 0], // Green
+  [0, 0, 255], // Blue
+  [255, 165, 0], // Orange
+  [0, 255, 255], // Cyan
+  [255, 255, 0], // Yellow
+  [255, 0, 255], // Magenta
+  [255, 69, 0], // Orange Red
+  [255, 20, 147], // Deep Pink
+  [255, 215, 0], // Gold
 ];
 
 const LINE_OPACITY = 0.9;
