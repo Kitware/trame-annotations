@@ -29,6 +29,7 @@ type Classification = {
   category_id: number;
   id?: number;
   label?: string; // fallback if category_id has no match
+  score?: number;
 };
 
 type BoxAnnotation = Classification & {
@@ -37,17 +38,16 @@ type BoxAnnotation = Classification & {
 
 type Annotation = Classification | BoxAnnotation;
 
-type ClassificationWithColor = Classification & {
+type AnnotationAugmentations = {
   color: Color;
   name: string;
 };
 
-type BoxAnnotationWithColor = BoxAnnotation & {
-  color: Color;
-  name: string;
-};
+type ClassificationAugmented = Classification & AnnotationAugmentations;
 
-type AnnotationWithColor = ClassificationWithColor | BoxAnnotationWithColor;
+type BoxAnnotationAugmented = BoxAnnotation & AnnotationAugmentations;
+
+type AnnotationAugmented = ClassificationAugmented | BoxAnnotationAugmented;
 
 type Category = {
   name: string;
@@ -111,19 +111,21 @@ const onImageLoad = () => {
   };
 };
 
-const annotationsWithColor = computed(() => {
+const annotationsAugmented = computed(() => {
   return annotations.value.map((annotation) => {
-    const { category_id, label } = annotation;
+    const { category_id, label, score } = annotation;
     const mutex = category_id ?? 0;
     const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
 
-    const name = categories.value[category_id]?.name ?? label ?? "Unknown";
+    const category = categories.value[category_id]?.name ?? label ?? "Unknown";
+    const scoreStr = score != undefined ? ` ${score.toFixed(2)}` : "";
+    const name = `${category}${scoreStr}`;
     return { ...annotation, color, name };
   });
 });
 
 const annotationsByType = computed(() =>
-  annotationsWithColor.value.reduce(
+  annotationsAugmented.value.reduce(
     (acc, annotation) => {
       if ("bbox" in annotation) {
         acc.boxAnnotations.push(annotation);
@@ -133,8 +135,8 @@ const annotationsByType = computed(() =>
       return acc;
     },
     {
-      boxAnnotations: [] as BoxAnnotationWithColor[],
-      classifications: [] as ClassificationWithColor[],
+      boxAnnotations: [] as BoxAnnotationAugmented[],
+      classifications: [] as ClassificationAugmented[],
     },
   ),
 );
@@ -252,7 +254,7 @@ function displayToPixel(
   return [pixelX, pixelY];
 }
 
-const hoveredBoxAnnotations = ref<AnnotationWithColor[]>([]);
+const hoveredBoxAnnotations = ref<AnnotationAugmented[]>([]);
 
 const mousePos = ref({ x: 0, y: 0 });
 

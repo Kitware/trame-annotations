@@ -11,6 +11,7 @@ ANNOTATIONS = [
         "id": 0,
         "category_id": 0,
         "label": "if matching category, should not be shown.  Also really long label",
+        "score": 0.5939393939393939,
         "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
     },
     {
@@ -24,11 +25,13 @@ ANNOTATIONS = [
 CLASSIFICATIONS = [
     {
         "id": 2,
+        "score": 0.9,
         "category_id": 0,
         "label": "if matching category, should not be shown. Also really long label",
     },
     {
         "id": 3,
+        "score": 0,
         "category_id": 1,
         "label": "fallback label",
     },
