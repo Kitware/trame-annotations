@@ -6,50 +6,17 @@ import {
   useDevicePixelRatio,
   useResizeObserver,
   useSelector,
-  useTooltipPositioning,
 } from "./utils.js";
-
-type Color = readonly [number, number, number];
-
-const CATEGORY_COLORS: Color[] = [
-  [255, 0, 0], // Red
-  [0, 255, 0], // Green
-  [0, 0, 255], // Blue
-  [255, 165, 0], // Orange
-  [0, 255, 255], // Cyan
-  [255, 255, 0], // Yellow
-  [255, 0, 255], // Magenta
-  [255, 69, 0], // Orange Red
-  [255, 20, 147], // Deep Pink
-  [255, 215, 0], // Gold
-];
+import {
+  CATEGORY_COLORS,
+  type Annotation,
+  type BoxAnnotationAugmented,
+  type ClassificationAugmented,
+} from "./annotations.js";
+import AnnotationsPopup from "./AnnotationPopup.vue";
 
 const LINE_OPACITY = 0.9;
 const LINE_WIDTH = 2; // in pixels
-
-type Box = [number, number, number, number];
-
-type Classification = {
-  category_id: number;
-  id?: number;
-  label?: string; // fallback if category_id has no match
-  score?: number;
-};
-
-type BoxAnnotation = Classification & {
-  bbox: Box;
-};
-
-type Annotation = Classification | BoxAnnotation;
-
-type AnnotationAugmentations = {
-  color: Color;
-  name: string;
-};
-
-type ClassificationAugmented = Classification & AnnotationAugmentations;
-
-type BoxAnnotationAugmented = BoxAnnotation & AnnotationAugmentations;
 
 type Category = {
   name: string;
@@ -104,7 +71,6 @@ const pickingCanvas = ref<HTMLCanvasElement>();
 const pickingCtx = computed(() =>
   pickingCanvas.value?.getContext("2d", { willReadFrequently: true }),
 );
-const labelContainer = ref<HTMLUListElement>();
 
 const imageSize = ref({ width: 0, height: 0 });
 const img = ref<HTMLImageElement>();
@@ -261,6 +227,7 @@ function displayToPixel(
 }
 
 const mouseMoveEvent = ref<MouseEvent>();
+
 const mousePos = computed(() => {
   if (!mouseMoveEvent.value) {
     return { x: 0, y: 0 };
@@ -275,7 +242,6 @@ const hoveredBoxAnnotations = computed(() => {
   if (
     !pickingCanvas.value ||
     pickingCanvas.value.width === 0 ||
-    !labelContainer.value ||
     !annotationsTree ||
     !categories.value ||
     !props.annotations ||
@@ -302,18 +268,18 @@ const hoveredBoxAnnotations = computed(() => {
     .map((annoIndex) => boxAnnotations.value[annoIndex]);
 });
 
-const classesHovered = ref(false);
+const showClasses = ref(false);
 
 const popupAnnotations = computed(() => {
   if (!mouseInComponent.value) return [];
-  if (classesHovered.value) return classifications.value;
+  if (showClasses.value) return classifications.value;
   return hoveredBoxAnnotations.value;
 });
 
 const classesDot = ref<HTMLDivElement>();
 
 const popupPosition = computed(() => {
-  if (classesHovered.value && classesDot.value) {
+  if (showClasses.value && classesDot.value) {
     const { left, top, width, height } =
       classesDot.value.getBoundingClientRect();
     return { x: left + width / 2, y: top + height / 2 };
@@ -322,13 +288,6 @@ const popupPosition = computed(() => {
 });
 
 const tooltipContainer = useSelector(containerSelector);
-
-const tooltipPosition = useTooltipPositioning(
-  labelContainer,
-  popupPosition,
-  pickingCanvas,
-  tooltipContainer,
-);
 
 const firstClassColor = computed(() => {
   if (!classifications.value.length) return "transparent";
@@ -362,45 +321,6 @@ const src = computed(() => unref(props.src) ?? undefined);
       ref="pickingCanvas"
       style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
     />
-    <ul
-      ref="labelContainer"
-      :style="{
-        position: 'absolute',
-        visibility: popupAnnotations.length ? 'visible' : 'hidden',
-        left: `${tooltipPosition.left}px`,
-        top: `${tooltipPosition.top}px`,
-        zIndex: 10,
-        padding: '0.4rem',
-        whiteSpace: 'pre',
-        fontSize: 'small',
-        borderRadius: '0.2rem',
-        borderColor: 'rgba(127, 127, 127, 0.75)',
-        borderStyle: 'solid',
-        borderWidth: 'thin',
-        backgroundColor: 'white',
-        listStyleType: 'none',
-        pointerEvents: 'none',
-        margin: 0,
-      }"
-    >
-      <li
-        v-for="annotation in popupAnnotations"
-        :key="annotation.id"
-        :style="{ display: 'flex', alignItems: 'center' }"
-      >
-        <span
-          :style="{
-            backgroundColor: `rgb(${annotation.color.join(',')})`,
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            display: 'inline-block',
-            marginRight: '0.4rem',
-          }"
-        ></span>
-        <span>{{ annotation.name }}</span>
-      </li>
-    </ul>
     <div
       v-if="classifications.length"
       ref="classesDot"
@@ -415,9 +335,15 @@ const src = computed(() => unref(props.src) ?? undefined);
           display: 'inline-block',
           marginRight: '0.4rem',
         }"
-        @mouseenter="classesHovered = true"
-        @mouseleave="classesHovered = false"
+        @mouseenter="showClasses = true"
+        @mouseleave="showClasses = false"
       ></span>
     </div>
+    <AnnotationsPopup
+      :popup-annotations="popupAnnotations"
+      :popup-position="popupPosition"
+      :relative-parent="pickingCanvas"
+      :container="tooltipContainer"
+    />
   </div>
 </template>

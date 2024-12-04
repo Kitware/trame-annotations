@@ -129,16 +129,16 @@ export function useTooltipPositioning(
   position: Ref<Position>,
   parent: Ref<Element | undefined | null>,
   container: Ref<Element | undefined | null>,
-  tooltipOffset: readonly [number, number] = [8, 8],
-  tooltipPadding: number = 16,
+  offset: number = 8,
+  margin: number = 16,
 ) {
   const popupRect = useResizeObserver(popup);
 
   const tooltipPosition = computed<TooltipPosition>(() => {
     const pos = position.value;
 
-    let left = pos.x + tooltipOffset[0];
-    let top = pos.y + tooltipOffset[1];
+    let left = pos.x + offset;
+    let top = pos.y + offset;
 
     if (!popupRect.value || !parent.value) return { left, top };
 
@@ -154,8 +154,8 @@ export function useTooltipPositioning(
     const toolTipInContainer = {
       left: left - containerRect.left,
       top: top - containerRect.top,
-      width: rect.width + tooltipPadding,
-      height: rect.height + tooltipPadding,
+      width: rect.width + margin,
+      height: rect.height + margin,
     };
 
     // Adjust position to keep the tooltip within the container
@@ -163,7 +163,7 @@ export function useTooltipPositioning(
       toolTipInContainer.left + toolTipInContainer.width >
       containerRect.width
     ) {
-      left = pos.x - rect.width - tooltipOffset[0];
+      left = pos.x - rect.width - offset;
     }
     if (left < containerRect.left) {
       left = containerRect.left;
@@ -173,7 +173,7 @@ export function useTooltipPositioning(
       toolTipInContainer.top + toolTipInContainer.height >
       containerRect.height
     ) {
-      top = pos.y - rect.height - tooltipOffset[1];
+      top = pos.y - rect.height - offset;
     }
     if (top < containerRect.top) {
       top = containerRect.top;
