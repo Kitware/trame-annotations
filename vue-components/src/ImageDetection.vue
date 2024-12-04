@@ -51,8 +51,6 @@ type ClassificationAugmented = Classification & AnnotationAugmentations;
 
 type BoxAnnotationAugmented = BoxAnnotation & AnnotationAugmentations;
 
-type AnnotationAugmented = ClassificationAugmented | BoxAnnotationAugmented;
-
 type Category = {
   name: string;
 };
@@ -237,18 +235,17 @@ const emit = defineEmits<Events>();
 
 const mouseInComponent = ref(false);
 
-function mouseEnter() {
-  const id = unref(props.identifier);
-  if (id != undefined) {
-    emit("hover", { id });
+watchEffect(() => {
+  if (!mouseInComponent.value) {
+    // leaving
+    emit("hover", { id: "" });
+    return;
   }
-  mouseInComponent.value = true;
-}
 
-function mouseLeave() {
-  emit("hover", { id: "" });
-  mouseInComponent.value = false;
-}
+  // entered
+  const id = unref(props.identifier) ?? "";
+  emit("hover", { id });
+});
 
 function displayToPixel(
   x: number,
@@ -263,31 +260,32 @@ function displayToPixel(
   return [pixelX, pixelY];
 }
 
-const hoveredBoxAnnotations = ref<AnnotationAugmented[]>([]);
+const mouseMoveEvent = ref<MouseEvent>();
+const mousePos = computed(() => {
+  if (!mouseMoveEvent.value) {
+    return { x: 0, y: 0 };
+  }
+  return {
+    x: mouseMoveEvent.value.clientX,
+    y: mouseMoveEvent.value.clientY,
+  };
+});
 
-const mousePos = ref({ x: 0, y: 0 });
-
-function mouseMove(e: MouseEvent) {
+const hoveredBoxAnnotations = computed(() => {
   if (
     !pickingCanvas.value ||
     pickingCanvas.value.width === 0 ||
     !labelContainer.value ||
     !annotationsTree ||
     !categories.value ||
-    !props.annotations
+    !props.annotations ||
+    !pickingCtx.value
   ) {
-    return;
-  }
-  const ctx = pickingCtx.value;
-  if (!ctx) {
-    return;
+    return [];
   }
 
-  const [pixelX, pixelY] = displayToPixel(
-    e.clientX,
-    e.clientY,
-    pickingCanvas.value,
-  );
+  const { x, y } = mousePos.value;
+  const [pixelX, pixelY] = displayToPixel(x, y, pickingCanvas.value);
 
   const pixelRectangle = new Rectangle({
     x: pixelX,
@@ -296,20 +294,13 @@ function mouseMove(e: MouseEvent) {
     height: 2,
   });
 
-  const hits = annotationsTree
+  return annotationsTree
     .retrieve(pixelRectangle)
     .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
     .map((hit) => hit.data)
     .filter((annoIndex) => annoIndex != undefined)
     .map((annoIndex) => boxAnnotations.value[annoIndex]);
-
-  hoveredBoxAnnotations.value = hits;
-
-  mousePos.value = {
-    x: e.clientX,
-    y: e.clientY,
-  };
-}
+});
 
 const classesHovered = ref(false);
 
@@ -352,9 +343,9 @@ const src = computed(() => unref(props.src) ?? undefined);
 <template>
   <div
     style="position: relative"
-    @mouseenter="mouseEnter"
-    @mousemove="mouseMove"
-    @mouseleave="mouseLeave"
+    @mouseenter="mouseInComponent = true"
+    @mouseleave="mouseInComponent = false"
+    @mousemove="mouseMoveEvent = $event"
   >
     <img
       ref="img"
