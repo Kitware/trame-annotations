@@ -13,6 +13,7 @@ import {
   type BoxAnnotationAugmented,
   type ClassificationAugmented,
 } from "./annotations.js";
+import ClassificationAnnotations from "./ClassificationAnnotations.vue";
 import AnnotationsPopup from "./AnnotationPopup.vue";
 
 const LINE_OPACITY = 0.9;
@@ -268,31 +269,12 @@ const hoveredBoxAnnotations = computed(() => {
     .map((annoIndex) => boxAnnotations.value[annoIndex]);
 });
 
-const showClasses = ref(false);
-
 const popupAnnotations = computed(() => {
   if (!mouseInComponent.value) return [];
-  if (showClasses.value) return classifications.value;
   return hoveredBoxAnnotations.value;
 });
 
-const classesDot = ref<HTMLDivElement>();
-
-const popupPosition = computed(() => {
-  if (showClasses.value && classesDot.value) {
-    const { left, top, width, height } =
-      classesDot.value.getBoundingClientRect();
-    return { x: left + width / 2, y: top + height / 2 };
-  }
-  return mousePos.value;
-});
-
 const tooltipContainer = useSelector(containerSelector);
-
-const firstClassColor = computed(() => {
-  if (!classifications.value.length) return "transparent";
-  return `rgb(${classifications.value[0].color.join(",")})`;
-});
 
 const borderSize = computed(() => (props.selected ? "4" : "0"));
 
@@ -321,27 +303,14 @@ const src = computed(() => unref(props.src) ?? undefined);
       ref="pickingCanvas"
       style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
     />
-    <div
-      v-if="classifications.length"
-      ref="classesDot"
+    <ClassificationAnnotations
       style="position: absolute; top: 0.4rem; left: 0.4rem; margin: 0"
-    >
-      <span
-        :style="{
-          backgroundColor: firstClassColor,
-          width: '14px',
-          height: '14px',
-          borderRadius: '50%',
-          display: 'inline-block',
-          marginRight: '0.4rem',
-        }"
-        @mouseenter="showClasses = true"
-        @mouseleave="showClasses = false"
-      ></span>
-    </div>
+      :classifications="classifications"
+      :popup-container="tooltipContainer"
+    />
     <AnnotationsPopup
       :popup-annotations="popupAnnotations"
-      :popup-position="popupPosition"
+      :popup-position="mousePos"
       :relative-parent="pickingCanvas"
       :container="tooltipContainer"
     />
