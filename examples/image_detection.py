@@ -11,7 +11,7 @@ ANNOTATIONS = [
         "id": 0,
         "category_id": 0,
         "label": "if matching category, should not be shown.  Also really long label",
-        "score": 0.5939393939393939,
+        "score": 0.4939393939393939,
         "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
     },
     {
@@ -98,6 +98,7 @@ class ImageDetectionExample:
                         src="https://placecats.com/200/200",
                         categories=("categories", CATEGORIES),
                         annotations=("both", BOXES_AND_CLASSES),
+                        score_threshold=0.5,
                         container_selector="#image-gallery",
                     )
 

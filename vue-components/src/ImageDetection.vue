@@ -87,6 +87,7 @@ const props = defineProps<{
   lineWidth?: TrameProp<number>;
   lineOpacity?: TrameProp<number>;
   selected?: TrameProp<boolean>;
+  scoreThreshold?: TrameProp<number>;
 }>();
 
 // withDefaults, toRefs, and handle null | Refs
@@ -95,6 +96,7 @@ const categories = computed(() => unref(props.categories) ?? {});
 const containerSelector = computed(() => unref(props.containerSelector) ?? "");
 const lineOpacity = computed(() => unref(props.lineOpacity) ?? LINE_OPACITY);
 const lineWidth = computed(() => unref(props.lineWidth) ?? LINE_WIDTH);
+const scoreThreshold = computed(() => unref(props.scoreThreshold) ?? 0);
 
 const visibleCanvas = ref<HTMLCanvasElement>();
 const visibleCtx = computed(() =>
@@ -116,16 +118,19 @@ const onImageLoad = () => {
 };
 
 const annotationsAugmented = computed(() => {
-  return annotations.value.map((annotation) => {
-    const { category_id, label, score } = annotation;
-    const mutex = category_id ?? 0;
-    const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
+  return annotations.value
+    .filter(({ score }) => score == undefined || score >= scoreThreshold.value)
+    .map((annotation) => {
+      const { category_id, label, score } = annotation;
+      const mutex = category_id ?? 0;
+      const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
 
-    const category = categories.value[category_id]?.name ?? label ?? "Unknown";
-    const scoreStr = score != undefined ? ` ${score.toFixed(2)}` : "";
-    const name = `${category}${scoreStr}`;
-    return { ...annotation, color, name };
-  });
+      const category =
+        categories.value[category_id]?.name ?? label ?? "Unknown";
+      const scoreStr = score != undefined ? ` ${score.toFixed(2)}` : "";
+      const name = `${category}${scoreStr}`;
+      return { ...annotation, color, name };
+    });
 });
 
 const annotationsByType = computed(() =>
