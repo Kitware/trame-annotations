@@ -64,12 +64,7 @@ type Rect = {
 export function useResizeObserver(
   element: Ref<HTMLElement | undefined | null>,
 ) {
-  const rect = ref<Rect>({
-    width: 0,
-    height: 0,
-    top: 0,
-    left: 0,
-  });
+  const rect = ref<Rect>();
   let observer: ResizeObserver | null = null;
   let currentElement: HTMLElement | undefined;
 

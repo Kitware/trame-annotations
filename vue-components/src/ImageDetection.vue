@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import { ref, watchEffect, computed, unref, type MaybeRef } from "vue";
-
-import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
-import {
-  useDevicePixelRatio,
-  useResizeObserver,
-  useSelector,
-} from "./utils.js";
+import { useSelector } from "./utils.js";
 import {
   CATEGORY_COLORS,
   type Annotation,
   type BoxAnnotationAugmented,
   type ClassificationAugmented,
 } from "./annotations.js";
+import BoxAnnotations from "./BoxAnnotations.vue";
 import ClassificationAnnotations from "./ClassificationAnnotations.vue";
-import AnnotationsPopup from "./AnnotationPopup.vue";
 
 const LINE_OPACITY = 0.9;
 const LINE_WIDTH = 2; // in pixels
@@ -22,25 +16,6 @@ const LINE_WIDTH = 2; // in pixels
 type Category = {
   name: string;
 };
-
-let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
-
-function doRectanglesOverlap(
-  recA: Rectangle<unknown>,
-  recB: Rectangle<unknown>,
-): boolean {
-  const noHOverlap =
-    recB.x >= recA.x + recA.width || recA.x >= recB.x + recB.width;
-
-  if (noHOverlap) {
-    return false;
-  }
-
-  const noVOverlap =
-    recB.y >= recA.y + recA.height || recA.y >= recB.y + recB.height;
-
-  return !noVOverlap;
-}
 
 type TrameProp<T> = MaybeRef<T | null>;
 
@@ -63,15 +38,6 @@ const containerSelector = computed(() => unref(props.containerSelector) ?? "");
 const lineOpacity = computed(() => unref(props.lineOpacity) ?? LINE_OPACITY);
 const lineWidth = computed(() => unref(props.lineWidth) ?? LINE_WIDTH);
 const scoreThreshold = computed(() => unref(props.scoreThreshold) ?? 0);
-
-const visibleCanvas = ref<HTMLCanvasElement>();
-const visibleCtx = computed(() =>
-  visibleCanvas.value?.getContext("2d", { alpha: true }),
-);
-const pickingCanvas = ref<HTMLCanvasElement>();
-const pickingCtx = computed(() =>
-  pickingCanvas.value?.getContext("2d", { willReadFrequently: true }),
-);
 
 const imageSize = ref({ width: 0, height: 0 });
 const img = ref<HTMLImageElement>();
@@ -118,78 +84,6 @@ const annotationsByType = computed(() =>
 const boxAnnotations = computed(() => annotationsByType.value.boxAnnotations);
 const classifications = computed(() => annotationsByType.value.classifications);
 
-const dpi = useDevicePixelRatio();
-
-const rect = useResizeObserver(visibleCanvas);
-
-const displayScale = computed(() => {
-  if (!visibleCanvas.value) return 1;
-  return imageSize.value.width / rect.value.width;
-});
-
-const lineWidthInDisplay = computed(
-  () => lineWidth.value * dpi.pixelRatio.value * displayScale.value,
-);
-
-// draw visible annotations
-watchEffect(() => {
-  if (!visibleCanvas.value || !visibleCtx.value) {
-    return;
-  }
-  const canvas = visibleCanvas.value;
-  const ctx = visibleCtx.value;
-
-  canvas.width = imageSize.value.width;
-  canvas.height = imageSize.value.height;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.globalCompositeOperation = "lighter"; // additive blend mode
-  ctx.lineWidth = lineWidthInDisplay.value;
-  const alpha = lineOpacity.value;
-  boxAnnotations.value.forEach(({ color, bbox }) => {
-    ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
-    ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
-  });
-});
-
-// draw picking annotations
-watchEffect(() => {
-  if (!pickingCtx.value || !pickingCanvas.value) {
-    return;
-  }
-  const canvas = pickingCanvas.value;
-  const ctx = pickingCtx.value;
-
-  canvas.width = imageSize.value.width;
-  canvas.height = imageSize.value.height;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  annotationsTree = new Quadtree({
-    width: canvas.width,
-    height: canvas.height,
-    maxLevels: 8,
-    maxObjects: 10,
-  });
-
-  boxAnnotations.value.forEach((annotation, i) => {
-    const treeNode = new Rectangle({
-      x: annotation.bbox[0],
-      y: annotation.bbox[1],
-      width: annotation.bbox[2],
-      height: annotation.bbox[3],
-      data: i,
-    });
-    annotationsTree?.insert(treeNode);
-    ctx.fillStyle = `rgb(255, 0, 0)`;
-    ctx.fillRect(
-      annotation.bbox[0],
-      annotation.bbox[1],
-      annotation.bbox[2],
-      annotation.bbox[3],
-    );
-  });
-});
-
 interface HoverEvent {
   id: string;
 }
@@ -204,7 +98,7 @@ const mouseInComponent = ref(false);
 
 watchEffect(() => {
   if (!mouseInComponent.value) {
-    // leaving
+    // left
     emit("hover", { id: "" });
     return;
   }
@@ -212,66 +106,6 @@ watchEffect(() => {
   // entered
   const id = unref(props.identifier) ?? "";
   emit("hover", { id });
-});
-
-function displayToPixel(
-  x: number,
-  y: number,
-  canvas: HTMLCanvasElement,
-): [number, number] {
-  const canvasBounds = canvas.getBoundingClientRect();
-
-  const pixelX = (canvas.width * (x - canvasBounds.left)) / canvasBounds.width;
-  const pixelY = (canvas.height * (y - canvasBounds.top)) / canvasBounds.height;
-
-  return [pixelX, pixelY];
-}
-
-const mouseMoveEvent = ref<MouseEvent>();
-
-const mousePos = computed(() => {
-  if (!mouseMoveEvent.value) {
-    return { x: 0, y: 0 };
-  }
-  return {
-    x: mouseMoveEvent.value.clientX,
-    y: mouseMoveEvent.value.clientY,
-  };
-});
-
-const hoveredBoxAnnotations = computed(() => {
-  if (
-    !pickingCanvas.value ||
-    pickingCanvas.value.width === 0 ||
-    !annotationsTree ||
-    !categories.value ||
-    !props.annotations ||
-    !pickingCtx.value
-  ) {
-    return [];
-  }
-
-  const { x, y } = mousePos.value;
-  const [pixelX, pixelY] = displayToPixel(x, y, pickingCanvas.value);
-
-  const pixelRectangle = new Rectangle({
-    x: pixelX,
-    y: pixelY,
-    width: 2,
-    height: 2,
-  });
-
-  return annotationsTree
-    .retrieve(pixelRectangle)
-    .filter((rect) => doRectanglesOverlap(rect, pixelRectangle))
-    .map((hit) => hit.data)
-    .filter((annoIndex) => annoIndex != undefined)
-    .map((annoIndex) => boxAnnotations.value[annoIndex]);
-});
-
-const popupAnnotations = computed(() => {
-  if (!mouseInComponent.value) return [];
-  return hoveredBoxAnnotations.value;
 });
 
 const tooltipContainer = useSelector(containerSelector);
@@ -286,7 +120,6 @@ const src = computed(() => unref(props.src) ?? undefined);
     style="position: relative"
     @mouseenter="mouseInComponent = true"
     @mouseleave="mouseInComponent = false"
-    @mousemove="mouseMoveEvent = $event"
   >
     <img
       ref="img"
@@ -295,24 +128,17 @@ const src = computed(() => unref(props.src) ?? undefined);
       style="width: 100%; outline-style: dotted; outline-color: red"
       @load="onImageLoad"
     />
-    <canvas
-      ref="visibleCanvas"
-      style="width: 100%; position: absolute; left: 0; top: 0"
-    />
-    <canvas
-      ref="pickingCanvas"
-      style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
+    <BoxAnnotations
+      :box-annotations="boxAnnotations"
+      :image-size="imageSize"
+      :line-width="lineWidth"
+      :line-opacity="lineOpacity"
+      :popup-container="tooltipContainer"
     />
     <ClassificationAnnotations
       style="position: absolute; top: 0.4rem; left: 0.4rem; margin: 0"
       :classifications="classifications"
       :popup-container="tooltipContainer"
-    />
-    <AnnotationsPopup
-      :popup-annotations="popupAnnotations"
-      :popup-position="mousePos"
-      :relative-parent="pickingCanvas"
-      :container="tooltipContainer"
     />
   </div>
 </template>
