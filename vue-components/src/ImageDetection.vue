@@ -3,6 +3,7 @@ import { ref, watchEffect, computed, unref, type MaybeRef } from "vue";
 import { useSelector } from "./utils.js";
 import {
   CATEGORY_COLORS,
+  MISSING_CATEGORY,
   type Annotation,
   type BoxAnnotationAugmented,
   type ClassificationAugmented,
@@ -53,8 +54,10 @@ const annotationsAugmented = computed(() => {
     .filter(({ score }) => score == undefined || score >= scoreThreshold.value)
     .map((annotation) => {
       const { category_id, label, score } = annotation;
-      const mutex = category_id ?? 0;
-      const color = CATEGORY_COLORS[mutex % CATEGORY_COLORS.length];
+      const color =
+        category_id != undefined
+          ? CATEGORY_COLORS[category_id % CATEGORY_COLORS.length]
+          : MISSING_CATEGORY;
 
       const category =
         categories.value[category_id]?.name ?? label ?? "Unknown";

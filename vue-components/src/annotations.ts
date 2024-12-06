@@ -1,7 +1,8 @@
 export type Color = readonly [number, number, number];
 
+export const MISSING_CATEGORY: Color = [255, 0, 0]; // Red
+
 export const CATEGORY_COLORS: Color[] = [
-  [255, 0, 0], // Red
   [0, 255, 0], // Green
   [0, 0, 255], // Blue
   [255, 165, 0], // Orange
