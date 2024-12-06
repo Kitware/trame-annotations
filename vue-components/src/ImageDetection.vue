@@ -24,7 +24,7 @@ const props = defineProps<{
   identifier?: TrameProp<string>;
   src: TrameProp<string>;
   annotations?: TrameProp<Annotation[]>;
-  categories?: TrameProp<Record<PropertyKey, Category>>;
+  categories?: TrameProp<Record<number, Category>>;
   containerSelector?: TrameProp<string>;
   lineWidth?: TrameProp<number>;
   lineOpacity?: TrameProp<number>;
