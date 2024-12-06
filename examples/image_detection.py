@@ -10,7 +10,8 @@ ANNOTATIONS = [
     {
         "id": 0,
         "category_id": 0,
-        "label": "if matching category, should not be shown",
+        "label": "if matching category, should not be shown.  Also really long label",
+        "score": 0.4939393939393939,
         "bbox": [60, 50, 100, 100],  # xmin, ymin, width, height  <-- COCO format
     },
     {
@@ -24,11 +25,13 @@ ANNOTATIONS = [
 CLASSIFICATIONS = [
     {
         "id": 2,
+        "score": 0.9,
         "category_id": 0,
-        "label": "if matching category, should not be shown",
+        "label": "if matching category, should not be shown. Also really long label",
     },
     {
         "id": 3,
+        "score": 0,
         "category_id": 1,
         "label": "fallback label",
     },
@@ -86,6 +89,7 @@ class ImageDetectionExample:
                         container_selector="#image-gallery",
                     )
                     ImageDetection(
+                        style="margin-left: 100px; width: 100px;",
                         src="https://placecats.com/200/200",
                         annotations=("classifications", CLASSIFICATIONS),
                         container_selector="#image-gallery",
@@ -94,6 +98,7 @@ class ImageDetectionExample:
                         src="https://placecats.com/200/200",
                         categories=("categories", CATEGORIES),
                         annotations=("both", BOXES_AND_CLASSES),
+                        score_threshold=0.5,
                         container_selector="#image-gallery",
                     )
 

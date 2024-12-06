@@ -30,6 +30,7 @@ class ImageDetection(HtmlElement):
             ("container_selector", "containerSelector"),
             ("line_width", "lineWidth"),
             ("line_opacity", "lineOpacity"),
+            ("score_threshold", "scoreThreshold"),
         ]
         self._event_names += [
             "hover",
