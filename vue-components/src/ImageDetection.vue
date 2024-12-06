@@ -61,7 +61,7 @@ const annotationsAugmented = computed(() => {
 
       const category =
         categories.value[category_id]?.name ?? label ?? "Unknown";
-      const scoreStr = score != undefined ? ` ${score.toFixed(2)}` : "";
+      const scoreStr = score != undefined ? ` ${Math.round(score * 100)}%` : "";
       const name = `${category}${scoreStr}`;
       return { ...annotation, color, name };
     });
