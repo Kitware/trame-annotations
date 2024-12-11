@@ -2,6 +2,60 @@
 
 
 
+## v0.4.0 (2024-12-11)
+
+### Feature
+
+* feat(ClassificationAnnotations): stack multiple dots ([`4cabc19`](https://github.com/Kitware/trame-annotations/commit/4cabc1997d06545baa7ae87b5909a0a378d8bf03))
+
+* feat(ImageDetection): show score as percentage ([`ba2aad1`](https://github.com/Kitware/trame-annotations/commit/ba2aad1fbeed5b262e9beeb8411640d765f1e2aa))
+
+* feat(ImageDetection): red reserved for missing category annotations ([`23d812e`](https://github.com/Kitware/trame-annotations/commit/23d812e77b4469cf010837f2c8ea0ab87955ee01))
+
+* feat(ImageDetection): add score threshold prop
+
+Filters annotations. ([`e229398`](https://github.com/Kitware/trame-annotations/commit/e2293988c2c33bd1804c1514dc2024854490a869))
+
+* feat(ImageDetection): add 4 more category colors ([`e1465db`](https://github.com/Kitware/trame-annotations/commit/e1465dbeafc3a617a249d8d0e8ba409e36d1c476))
+
+* feat(ImageDetection): show score for annotations ([`4eccedf`](https://github.com/Kitware/trame-annotations/commit/4eccedfb0fe33cc2841c41564ae62aaea76a1a6c))
+
+* feat(ImageDetection): hover over dot to see classes ([`867f415`](https://github.com/Kitware/trame-annotations/commit/867f415c2edc5fb59aec01d8660ae99f6e82e8ba))
+
+### Fix
+
+* fix(ImageDetection): emit hover event in mouseleave function
+
+There is an error in Javascript that borks client side trame code
+when calling emit(&#39;hover&#39;) in a watchEffect.  Steps
+1. In nrtk-explorer
+2. Turn on Model Inference
+3. Switch to Grid view for image list
+4. Error in JS console:
+NotReadableError: The requested file could not be read, typically due to permission problems that have occurred after a reference to a file was acquired.
+in
+t.onmessage = async u =&gt; {
+        const p = await c.processChunk(u.data, h);
+        p &amp;&amp; l(p)
+    } ([`d38cd84`](https://github.com/Kitware/trame-annotations/commit/d38cd84c7f4777cd43b4e6ef70221d2f5ccb90c4))
+
+### Refactor
+
+* refactor(ImageDetection): extract BoxAnnotations component ([`784aedb`](https://github.com/Kitware/trame-annotations/commit/784aedb4f986bfd57b0bff61f1eb4c66d4dfa4ba))
+
+* refactor(ImageDetection): extract ClassificationAnnotations component ([`f974fcf`](https://github.com/Kitware/trame-annotations/commit/f974fcfe15b99a3e3e13abd4560f7a311b54b621))
+
+* refactor(ImageDetection): extract AnnotationPopup component ([`49d6871`](https://github.com/Kitware/trame-annotations/commit/49d6871cc21026979903525e57570e94537f910d))
+
+* refactor(ImageDetection): declarative style for mouse events ([`8faee9a`](https://github.com/Kitware/trame-annotations/commit/8faee9a2690bee984853a32e383bc7b728464ad4))
+
+### Unknown
+
+* Merge pull request #7 from Kitware/hover-classes
+
+Hover over dot to show image classifications ([`f18eb65`](https://github.com/Kitware/trame-annotations/commit/f18eb656496ce862122123d2f0ca38937a325627))
+
+
 ## v0.3.0 (2024-11-22)
 
 ### Feature
