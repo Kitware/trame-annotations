@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect, computed, unref, type MaybeRef } from "vue";
+import { ref, computed, unref, type MaybeRef } from "vue";
 import { useSelector } from "./utils.js";
 import {
   CATEGORY_COLORS,
@@ -87,9 +87,9 @@ const annotationsByType = computed(() =>
 const boxAnnotations = computed(() => annotationsByType.value.boxAnnotations);
 const classifications = computed(() => annotationsByType.value.classifications);
 
-interface HoverEvent {
+type HoverEvent = {
   id: string;
-}
+};
 
 type Events = {
   hover: [HoverEvent];
@@ -99,17 +99,18 @@ const emit = defineEmits<Events>();
 
 const mouseInComponent = ref(false);
 
-watchEffect(() => {
-  if (!mouseInComponent.value) {
-    // left
-    emit("hover", { id: "" });
-    return;
+function mouseEnter() {
+  const id = unref(props.identifier);
+  if (id != undefined) {
+    emit("hover", { id });
   }
+  mouseInComponent.value = true;
+}
 
-  // entered
-  const id = unref(props.identifier) ?? "";
-  emit("hover", { id });
-});
+function mouseLeave() {
+  emit("hover", { id: "" });
+  mouseInComponent.value = false;
+}
 
 const tooltipContainer = useSelector(containerSelector);
 
@@ -121,8 +122,8 @@ const src = computed(() => unref(props.src) ?? undefined);
 <template>
   <div
     style="position: relative"
-    @mouseenter="mouseInComponent = true"
-    @mouseleave="mouseInComponent = false"
+    @mouseenter="mouseEnter"
+    @mouseleave="mouseLeave"
   >
     <img
       ref="img"
