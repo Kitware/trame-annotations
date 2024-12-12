@@ -2,6 +2,15 @@
 
 
 
+## v0.4.2 (2024-12-12)
+
+### Fix
+
+* fix(hatch): improve hook code ([`4cb468c`](https://github.com/Kitware/trame-annotations/commit/4cb468c2f3ce90f192c93f9515025fe9e848609a))
+
+* fix(hatch): windows build path handling ([`e4d6603`](https://github.com/Kitware/trame-annotations/commit/e4d660349a4d0dfc6ba8ace5eef1c022d4f7cf9f))
+
+
 ## v0.4.1 (2024-12-12)
 
 ### Fix
