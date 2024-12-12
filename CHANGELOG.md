@@ -2,6 +2,13 @@
 
 
 
+## v0.4.1 (2024-12-12)
+
+### Fix
+
+* fix(hatch): windows build path handling ([`7a474e0`](https://github.com/Kitware/trame-annotations/commit/7a474e0beb2fb72fc0ddcbe3c796a3361d873016))
+
+
 ## v0.4.0 (2024-12-11)
 
 ### Feature
