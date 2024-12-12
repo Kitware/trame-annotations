@@ -1,3 +1,4 @@
+from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 import subprocess
 
@@ -9,12 +10,12 @@ class BuildFrontend(BuildHookInterface):
     def initialize(self, version, build_data):
         subprocess.run(
             args=["npm", "install"],
-            cwd=self.FRONTEND_DIR_PATH,
+            cwd=str(Path(__file__).with_name(self.FRONTEND_DIR_PATH).resolve()),
             check=True,
         )
         subprocess.run(
             args=["npm", "run", "build"],
-            cwd=self.FRONTEND_DIR_PATH,
+            cwd=str(Path(__file__).with_name(self.FRONTEND_DIR_PATH).resolve()),
             check=True,
         )
 
