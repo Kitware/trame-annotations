@@ -8,14 +8,16 @@ class BuildFrontend(BuildHookInterface):
     FRONTEND_DIR_PATH = "vue-components"
 
     def initialize(self, version, build_data):
+        work_dir = str((Path(self.root()) / self.FRONTEND_DIR_PATH).resolve())
+        print(f"Run build commands in {work_dir}")
         subprocess.run(
             args=["npm", "install"],
-            cwd=str(Path(__file__).with_name(self.FRONTEND_DIR_PATH).resolve()),
+            cwd=work_dir,
             check=True,
         )
         subprocess.run(
             args=["npm", "run", "build"],
-            cwd=str(Path(__file__).with_name(self.FRONTEND_DIR_PATH).resolve()),
+            cwd=work_dir,
             check=True,
         )
 
