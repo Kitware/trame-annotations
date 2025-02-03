@@ -23,51 +23,69 @@ const pickingCtx = computed(() =>
   pickingCanvas.value?.getContext("2d", { willReadFrequently: true }),
 );
 
-const dpi = useDevicePixelRatio();
-
 const rect = useResizeObserver(visibleCanvas);
 
-const displayScale = computed(() => {
+// Compute scaling factor from image size to canvas size.
+const imageToCanvasScale = computed(() => {
   if (!rect.value) return 1;
-  return props.imageSize.width / rect.value.width;
+  return rect.value.width / props.imageSize.width;
 });
 
+const canvasDims = computed(() => {
+  if (!rect.value) return { width: 0, height: 0 };
+  return {
+    width: Math.floor(props.imageSize.width * imageToCanvasScale.value),
+    height: Math.floor(props.imageSize.height * imageToCanvasScale.value),
+  };
+});
+
+const dpi = useDevicePixelRatio();
 const lineWidthInDisplay = computed(
-  () => lineWidth.value * dpi.pixelRatio.value * displayScale.value,
+  () => lineWidth.value * dpi.pixelRatio.value,
 );
 
 // Draw visible annotations
 watchEffect(() => {
-  if (!visibleCanvas.value || !visibleCtx.value) return;
+  if (!visibleCanvas.value || !visibleCtx.value || !rect.value) return;
 
   const canvas = visibleCanvas.value;
   const ctx = visibleCtx.value;
 
-  canvas.width = props.imageSize.width;
-  canvas.height = props.imageSize.height;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dims = canvasDims.value;
+  // setTimeout avoids "error: ResizeObserver loop completed with undelivered notifications"
+  setTimeout(() => {
+    canvas.width = dims.width;
+    canvas.height = dims.height;
 
-  ctx.globalCompositeOperation = "lighter";
-  ctx.lineWidth = lineWidthInDisplay.value;
-  const alpha = lineOpacity.value;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  props.boxAnnotations.forEach(({ color, bbox }) => {
-    ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
-    ctx.strokeRect(bbox[0], bbox[1], bbox[2], bbox[3]);
-  });
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineWidth = lineWidthInDisplay.value;
+    const alpha = lineOpacity.value;
+
+    props.boxAnnotations.forEach(({ color, bbox }) => {
+      ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
+      ctx.strokeRect(
+        bbox[0] * imageToCanvasScale.value,
+        bbox[1] * imageToCanvasScale.value,
+        bbox[2] * imageToCanvasScale.value,
+        bbox[3] * imageToCanvasScale.value,
+      );
+    });
+  }, 0);
 });
 
 // Draw picking annotations
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
 
 watchEffect(() => {
-  if (!pickingCanvas.value || !pickingCtx.value) return;
+  if (!pickingCanvas.value || !pickingCtx.value || !rect.value) return;
 
   const canvas = pickingCanvas.value;
   const ctx = pickingCtx.value;
 
-  canvas.width = props.imageSize.width;
-  canvas.height = props.imageSize.height;
+  canvas.width = canvasDims.value.width;
+  canvas.height = canvasDims.value.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   annotationsTree = new Quadtree({
@@ -78,21 +96,19 @@ watchEffect(() => {
   });
 
   props.boxAnnotations.forEach((annotation, i) => {
+    const [x, y, width, height] = annotation.bbox.map(
+      (coord) => coord * imageToCanvasScale.value,
+    );
     const treeNode = new Rectangle({
-      x: annotation.bbox[0],
-      y: annotation.bbox[1],
-      width: annotation.bbox[2],
-      height: annotation.bbox[3],
+      x,
+      y,
+      width,
+      height,
       data: i,
     });
     annotationsTree!.insert(treeNode);
     ctx.fillStyle = "rgb(255, 0, 0)";
-    ctx.fillRect(
-      annotation.bbox[0],
-      annotation.bbox[1],
-      annotation.bbox[2],
-      annotation.bbox[3],
-    );
+    ctx.fillRect(x, y, width, height);
   });
 });
 
@@ -102,7 +118,6 @@ function displayToPixel(
   canvas: HTMLCanvasElement,
 ): [number, number] {
   const { left, width, top, height } = canvas.getBoundingClientRect();
-
   return [
     (canvas.width * (x - left)) / width,
     (canvas.height * (y - top)) / height,
