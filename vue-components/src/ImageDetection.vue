@@ -133,6 +133,7 @@ const src = computed(() => unref(props.src) ?? undefined);
       @load="onImageLoad"
     />
     <BoxAnnotations
+      v-if="boxAnnotations.length > 0"
       :box-annotations="boxAnnotations"
       :image-size="imageSize"
       :line-width="lineWidth"
@@ -140,6 +141,7 @@ const src = computed(() => unref(props.src) ?? undefined);
       :popup-container="tooltipContainer"
     />
     <ClassificationAnnotations
+      v-if="classifications.length > 0"
       style="position: absolute; top: 0.4rem; left: 0.4rem; margin: 0"
       :classifications="classifications"
       :popup-container="tooltipContainer"
