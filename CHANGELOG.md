@@ -2,6 +2,13 @@
 
 
 
+## v0.4.3 (2025-02-13)
+
+### Fix
+
+* fix(BoxAnnotations): limit canvas width+height to display size ([`fffb4da`](https://github.com/Kitware/trame-annotations/commit/fffb4daefed9a672540720bd1d2751adbf4614da))
+
+
 ## v0.4.2 (2024-12-12)
 
 ### Fix
