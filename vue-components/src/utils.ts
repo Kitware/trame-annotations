@@ -54,7 +54,7 @@ export function useDevicePixelRatio() {
 
 export type UseDevicePixelRatioReturn = ReturnType<typeof useDevicePixelRatio>;
 
-type Rect = {
+export type Rect = {
   width: number;
   height: number;
   top: number;
@@ -64,7 +64,7 @@ type Rect = {
 export function useResizeObserver(
   element: Ref<HTMLElement | undefined | null>,
 ) {
-  const rect = ref<Rect>();
+  const rect: Ref<Rect> = ref({ width: 1, height: 1, top: 0, left: 0 });
   let observer: ResizeObserver | null = null;
   let currentElement: HTMLElement | undefined;
 

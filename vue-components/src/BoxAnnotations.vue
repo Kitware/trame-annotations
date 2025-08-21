@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, defineProps, toRefs } from "vue";
+import {
+  ref,
+  computed,
+  watchEffect,
+  watch,
+  defineProps,
+  toRefs,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 import { Quadtree, Rectangle } from "@timohausmann/quadtree-ts";
 import type { BoxAnnotationAugmented } from "./annotations.js";
 import AnnotationsPopup from "./AnnotationPopup.vue";
-import { useDevicePixelRatio, useResizeObserver } from "./utils.js";
+import { useDevicePixelRatio, type Rect } from "./utils.js";
 
 const props = defineProps<{
   boxAnnotations: BoxAnnotationAugmented[];
@@ -11,6 +20,7 @@ const props = defineProps<{
   lineWidth: number;
   lineOpacity: number;
   popupContainer: Element | undefined | null;
+  groupByModel: boolean;
 }>();
 const { boxAnnotations, lineWidth, lineOpacity } = toRefs(props);
 
@@ -23,16 +33,23 @@ const pickingCtx = computed(() =>
   pickingCanvas.value?.getContext("2d", { willReadFrequently: true }),
 );
 
-const rect = useResizeObserver(visibleCanvas);
+const rect = ref<Rect>({ width: 1, height: 1, top: 0, left: 0 });
+let resizeObserver: ResizeObserver | null = null;
 
 // Compute scaling factor from image size to canvas size.
 const imageToCanvasScale = computed(() => {
   if (!rect.value) return 1;
-  return rect.value.width / props.imageSize.width;
+
+  const widthRatio = rect.value.width / props.imageSize.width;
+  const heightRatio = rect.value.height / props.imageSize.height;
+  if (widthRatio > heightRatio) {
+    return heightRatio;
+  } else {
+    return widthRatio;
+  }
 });
 
 const canvasDims = computed(() => {
-  if (!rect.value) return { width: 0, height: 0 };
   return {
     width: Math.floor(props.imageSize.width * imageToCanvasScale.value),
     height: Math.floor(props.imageSize.height * imageToCanvasScale.value),
@@ -45,35 +62,50 @@ const lineWidthInDisplay = computed(
 );
 
 // Draw visible annotations
-watchEffect(() => {
-  if (!visibleCanvas.value || !visibleCtx.value || !rect.value) return;
+watch(
+  [
+    visibleCanvas,
+    visibleCtx,
+    canvasDims,
+    lineWidthInDisplay,
+    lineOpacity,
+    imageToCanvasScale,
+    () => props.boxAnnotations,
+  ],
+  () => {
+    if (!visibleCanvas.value || !visibleCtx.value) return;
+    // setTimeout avoids "error: ResizeObserver loop completed with undelivered notifications"
+    setTimeout(drawVisibleAnnotations, 0);
+  },
+);
+
+function drawVisibleAnnotations() {
+  if (!visibleCanvas.value || !visibleCtx.value) return;
 
   const canvas = visibleCanvas.value;
   const ctx = visibleCtx.value;
 
   const dims = canvasDims.value;
-  // setTimeout avoids "error: ResizeObserver loop completed with undelivered notifications"
-  setTimeout(() => {
-    canvas.width = dims.width;
-    canvas.height = dims.height;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.width = dims.width;
+  canvas.height = dims.height;
 
-    ctx.globalCompositeOperation = "lighter";
-    ctx.lineWidth = lineWidthInDisplay.value;
-    const alpha = lineOpacity.value;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    props.boxAnnotations.forEach(({ color, bbox }) => {
-      ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
-      ctx.strokeRect(
-        bbox[0] * imageToCanvasScale.value,
-        bbox[1] * imageToCanvasScale.value,
-        bbox[2] * imageToCanvasScale.value,
-        bbox[3] * imageToCanvasScale.value,
-      );
-    });
-  }, 0);
-});
+  ctx.globalCompositeOperation = "lighter";
+  ctx.lineWidth = lineWidthInDisplay.value;
+  const alpha = lineOpacity.value;
+
+  props.boxAnnotations.forEach(({ color, bbox }) => {
+    ctx.strokeStyle = `rgba(${[...color, alpha].join(",")})`;
+    ctx.strokeRect(
+      bbox[0] * imageToCanvasScale.value,
+      bbox[1] * imageToCanvasScale.value,
+      bbox[2] * imageToCanvasScale.value,
+      bbox[3] * imageToCanvasScale.value,
+    );
+  });
+}
 
 // Draw picking annotations
 let annotationsTree: Quadtree<Rectangle<number>> | undefined = undefined;
@@ -118,10 +150,25 @@ function displayToPixel(
   canvas: HTMLCanvasElement,
 ): [number, number] {
   const { left, width, top, height } = canvas.getBoundingClientRect();
-  return [
-    (canvas.width * (x - left)) / width,
-    (canvas.height * (y - top)) / height,
-  ];
+
+  const ratio_w = width / height / (canvas.width / canvas.height);
+  const ratio_h = 1 / ratio_w;
+
+  let frac: [number, number];
+
+  if (ratio_w > 1) {
+    frac = [
+      ((x - left) / width) * ratio_w - 0.5 * ratio_w + 0.5,
+      (y - top) / height,
+    ];
+  } else {
+    frac = [
+      (x - left) / width,
+      ((y - top) / height) * ratio_h - 0.5 * ratio_h + 0.5,
+    ];
+  }
+
+  return [canvas.width * frac[0], canvas.height * frac[1]];
 }
 
 const mouseMoveEvent = ref<MouseEvent>();
@@ -188,24 +235,64 @@ const popupAnnotations = computed(() => {
   if (!mouseInComponent.value) return [];
   return hoveredBoxAnnotations.value;
 });
+
+onMounted(() => {
+  function onResize(entries: ResizeObserverEntry[]) {
+    const entry = entries[entries.length - 1];
+    const { width, height, top, left } = entry.target.getBoundingClientRect();
+    rect.value = { width, height, top, left };
+  }
+
+  resizeObserver = new ResizeObserver(onResize);
+
+  if (visibleCanvas.value) {
+    resizeObserver.observe(visibleCanvas.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+});
+
+function onMouseMove(event: MouseEvent) {
+  mouseInComponent.value = true;
+  mouseMoveEvent.value = event;
+}
 </script>
 
 <template>
   <canvas
     ref="visibleCanvas"
-    style="width: 100%; position: absolute; left: 0; top: 0"
+    style="
+      width: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      object-fit: contain;
+    "
   />
   <canvas
     ref="pickingCanvas"
-    style="opacity: 0; width: 100%; position: absolute; left: 0; top: 0"
-    @mouseenter="mouseInComponent = true"
+    style="
+      opacity: 0;
+      width: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      object-fit: contain;
+    "
     @mouseleave="mouseInComponent = false"
-    @mousemove="mouseMoveEvent = $event"
+    @mousemove="onMouseMove"
   />
   <AnnotationsPopup
     :popup-annotations="popupAnnotations"
     :popup-position="mousePos"
     :relative-parent="pickingCanvas"
     :container="popupContainer"
+    :group-by-model="groupByModel"
   />
 </template>

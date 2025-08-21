@@ -9,6 +9,7 @@ const DOT_SIZE = 14;
 const props = defineProps<{
   classifications: ClassificationAugmented[];
   popupContainer: Element | undefined | null;
+  groupByModel: boolean;
 }>();
 const showClasses = ref(false);
 const classesDot = ref<HTMLDivElement>();
@@ -23,7 +24,10 @@ const popupPosition = computed(() => {
 const classColors = computed(() => {
   if (!props.classifications.length) return [];
   return props.classifications
-    .map(({ color }) => `rgb(${color.join(",")})`)
+    .map((classification) => {
+      const { color } = classification;
+      return `rgb(${color.join(",")})`;
+    })
     .reverse();
 });
 
@@ -63,6 +67,7 @@ const popupAnnotations = computed(() => {
       :popup-position="popupPosition"
       :relative-parent="classesDot"
       :container="popupContainer"
+      :group-by-model="groupByModel"
     />
   </div>
 </template>
