@@ -14,6 +14,14 @@ export const CATEGORY_COLORS: Color[] = [
   [255, 215, 0], // Gold
 ];
 
+export const MODEL_COLORS: Color[] = [
+  [255, 215, 0], // Gold
+  [255, 20, 147], // Deep Pink
+  [0, 255, 255], // Cyan
+  [255, 0, 0], // Red
+  [0, 255, 0], // Green
+];
+
 export type Box = [number, number, number, number];
 
 export type Classification = {
@@ -21,6 +29,7 @@ export type Classification = {
   id?: number;
   label?: string; // fallback if category_id has no match
   score?: number;
+  model_id?: number;
 };
 
 export type BoxAnnotation = Classification & {
@@ -32,6 +41,7 @@ export type Annotation = Classification | BoxAnnotation;
 export type AnnotationAugmentations = {
   color: Color;
   name: string;
+  modelName?: string;
 };
 
 export type ClassificationAugmented = Classification & AnnotationAugmentations;
